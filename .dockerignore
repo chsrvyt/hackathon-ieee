@@ -10,3 +10,5 @@ docs
 .github
 .env
 .env.*
+frontend/android
+frontend/assets

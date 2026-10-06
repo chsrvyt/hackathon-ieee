@@ -1,0 +1,2 @@
+# Windows batch scripts must keep CRLF line endings.
+*.bat text eol=crlf whitespace=cr-at-eol
