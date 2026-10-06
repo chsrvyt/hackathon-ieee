@@ -1,6 +1,6 @@
 # AttendAI — Implementation Status
 
-Last updated: 2026-10-06 (branch `claude/lucid-mccarthy-05cpem`)
+Last updated: 2026-10-06, second iteration: navigation, UI/UX audit, Android app (branch `claude/lucid-mccarthy-05cpem`)
 
 ## Starting point (audit)
 
@@ -13,8 +13,11 @@ automated tests.
 
 | Component | Status | Evidence | Blocker | Next action |
 |---|---|---|---|---|
-| Frontend | Done | React 19 + TS, `npx tsc -b` clean, 11 Vitest tests, production build 109 KB gz, Playwright E2E | – | – |
-| Backend | Done | FastAPI, 178 pytest tests on PostgreSQL, ruff clean | – | – |
+| Frontend | Done | React 19 + TS, `npx tsc -b` clean, 11 Vitest tests, production build 116 KB gz, Playwright E2E | – | – |
+| Navigation | Done | desktop top navigation bar; phone app bar + bottom tab bar (role-specific, max 5 tabs); E2E phone-nav test | – | – |
+| UI/UX & layout | Done | audit of every page × role at 360/390/768/1024/1440 px: 0 overflow, 0 small touch targets, **0 WCAG 2.1 AA violations** (axe), 0 JS errors; tables become cards on phones | – | – |
+| Android app | Done | Capacitor 8 APK built in CI, **passed on an Android 14 emulator**, published as GitHub Release `android-latest` (`AttendAI-1.0.2.apk`, 3.8 MB) | Stable signing key not configured (per-build key) | Optional: add `ANDROID_KEYSTORE_*` secrets |
+| Backend | Done | FastAPI, 181 pytest tests on PostgreSQL (incl. bearer-token and CORS tests), ruff clean | – | – |
 | Database | Done | Alembic `0001` upgrade/downgrade/re-upgrade verified, `alembic check` no drift, DB-level constraints | – | – |
 | Authentication | Done | scrypt, server-side revocable sessions, httpOnly cookie, throttling (`test_auth.py`) | – | – |
 | Authorization | Done | `authz.py` scopes; IDOR tests for every role; OpenAPI route sweep | – | – |
@@ -25,7 +28,7 @@ automated tests.
 | Alerts | Done | generated on risk change and condonation events; read/unread | – | – |
 | Condonation | Done | PENDING→APPROVED/REJECTED/WITHDRAWN, history, permissions (`test_condonation.py`, E2E) | – | – |
 | Reports | Done | department report, shortage list, CSV export (formula-safe) | – | – |
-| Tests | Done | 178 backend + 11 frontend + 5 E2E; GitHub Actions CI run #2 **green** (all 4 jobs) | – | – |
+| Tests | Done | 181 backend + 11 frontend + 7 E2E + on-device APK smoke test; GitHub Actions CI run #9 **green**, Android run #2 **green** | – | – |
 | Production build / container | Done | Docker image built; production container + PostgreSQL verified with E2E (fresh DB and re-run) | – | – |
 | Deployment (public URL) | **Not deployed** | `render.yaml` Blueprint ready | No hosting credentials in this environment; hosting APIs blocked by network policy | Owner applies the Render Blueprint (see FINAL_STATUS) |
 

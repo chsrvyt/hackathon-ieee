@@ -1,7 +1,7 @@
 # AttendAI — Final Status
 
 **Project:** AttendAI — Attendance Shortage Early Warning & Condonation System
-**Date:** 2026-10-06 · **Branch:** `claude/lucid-mccarthy-05cpem`
+**Date:** 2026-10-06 (second iteration: navigation, UI/UX, Android app) · **Branch:** `claude/lucid-mccarthy-05cpem`
 
 ## Deployment
 
@@ -12,6 +12,8 @@
 | Health URL | `https://<service>.onrender.com/health` after deployment |
 | Database | PostgreSQL 16 (Render managed PostgreSQL in `render.yaml`; local/CI: PostgreSQL 16) |
 | Deployment config | `render.yaml` (Blueprint), `Dockerfile`, `docker-compose.yml`, `backend/start.sh` |
+| One-click deploy | [Deploy to Render](https://render.com/deploy?repo=https://github.com/chsrvyt/hackathon-ieee/tree/claude/lucid-mccarthy-05cpem) |
+| **Android app (APK)** | **Published:** https://github.com/chsrvyt/hackathon-ieee/releases/tag/android-latest (`AttendAI-1.0.2.apk`, 3.8 MB, sha256 `334a2eb9…a70c8`) |
 
 ### Why there is no live URL (external blocker)
 
@@ -23,8 +25,8 @@ deployment: the exact production image was built and verified end-to-end here ag
 PostgreSQL.
 
 **Single action needed (repository owner, about 5 minutes):**
-Render dashboard → **New → Blueprint** → select `chsrvyt/hackathon-ieee`, branch
-`claude/lucid-mccarthy-05cpem` (or `main` after merging) → **Apply**. Then run the smoke test
+open [Deploy to Render](https://render.com/deploy?repo=https://github.com/chsrvyt/hackathon-ieee/tree/claude/lucid-mccarthy-05cpem) while signed in to Render (or Render → **New → Blueprint** →
+`chsrvyt/hackathon-ieee`, branch `claude/lucid-mccarthy-05cpem` → **Apply**). Then run the smoke test
 in [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md#smoke-test-after-every-deploy):
 
 ```bash
@@ -39,7 +41,8 @@ in its network policy, and the deployment and live verification can be completed
 
 | Item | Result |
 |---|---|
-| Frontend | `tsc -b` clean · `vite build` OK (366 KB JS / 109 KB gzipped, 14 KB CSS) |
+| Frontend | `tsc -b` clean · `vite build` OK (388 KB JS / 116 KB gzipped, 19 KB CSS) |
+| Android | Gradle (AGP 8.13, compileSdk/targetSdk 36, minSdk 24) · release APK 3.8 MB, verified with `apksigner` |
 | Backend | ruff check + format clean · Alembic migration applies, rolls back, re-applies, no drift |
 | Docker image | builds (114 MB compressed), runs as non-root, migrates and seeds on start, healthcheck |
 
@@ -48,11 +51,14 @@ in its network policy, and the deployment and live verification can be completed
 | Suite | Result |
 |---|---|
 | Unit (analytics engine) | 91 passed |
-| API / integration (PostgreSQL) | 178 passed in total (auth, authorization, upload, analytics, condonation, reports) |
+| API / integration (PostgreSQL) | 181 passed in total (auth incl. bearer tokens and CORS allow-list, authorization, upload, analytics, condonation, reports) |
 | Security | IDOR tests per role, CSRF, throttling, session revocation, OpenAPI route sweep (all routes 401 anonymous; no cross-student access), pip-audit + npm audit: 0 vulnerabilities |
 | Frontend | 11 passed (API client, auth routing incl. sign-in regression, explainable view, condonation form) |
-| E2E | 5 passed against the **production Docker image + PostgreSQL** (`APP_ENV=production`, Secure cookies), on a fresh database and on a re-run |
-| CI (GitHub Actions) | Run #2 on `8660bca`: backend ✅ frontend ✅ E2E ✅ Docker build ✅ |
+| E2E | 7 passed against the **production Docker image + PostgreSQL** (`APP_ENV=production`, Secure cookies), on a fresh database and on a re-run: demo flow, HOD scope, phone bottom navigation, WCAG 2.1 AA scan, error handling, Android app mode |
+| On-device | `e2e/android/app-smoke.mjs` on an Android 14 emulator: first launch, server picker, student and admin flows, tabs, hardware back, sign-out |
+| CI (GitHub Actions) | Run #9 on `45d3140`: backend ✅ frontend ✅ E2E (incl. app mode) ✅ Docker build ✅ |
+| UI/UX audit | all pages × roles × 5 widths: 0 overflow, 0 touch targets < 36 px on phones, 0 WCAG 2.1 AA violations, 0 JS errors |
+| Android | Android workflow run #2: signed APK built ✅, on-device smoke test on Android 14 emulator ✅ (320 px screen: no overflow, bottom bar at the edge), release published ✅ |
 
 ## Acceptance (verified on the production container, not yet on a public URL)
 
@@ -98,6 +104,9 @@ in its network policy, and the deployment and live verification can be completed
 
 ## Implemented
 
+- Navigation: desktop top navigation bar; phone/app bottom tab bar; account menu
+- Android app (Capacitor 8): configurable server, bearer-token auth, share-sheet downloads, back button, edge-to-edge
+
 - Session auth (scrypt, httpOnly cookie, revocable sessions, login throttling) with four roles and HOD department scope
 - CSV/XLSX import with full validation, atomic persistence, strict/replace modes, dry run, opt-in registration
 - Deterministic explainable analytics: current %, trend, projection, SAFE/WARNING/CRITICAL, reason, next action, subject-level risk
@@ -138,6 +147,7 @@ public by design, only seeded when `SEED_DEMO_DATA=true`).
 
 ```text
 READY FOR DEMO on the verified production container (docker compose up, or any Docker host)
-NOT YET LIVE: public deployment pending the owner's one-step Render Blueprint apply,
-followed by the same E2E suite against the public URL.
+ANDROID APP: built, emulator-verified and published (GitHub Release android-latest)
+NOT YET LIVE: the public website needs the owner's one-click Render deploy; then point the
+app at that URL (or set ATTENDAI_SERVER_URL and re-run the Android workflow to pre-fill it).
 ```

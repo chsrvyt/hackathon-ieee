@@ -4,11 +4,13 @@ Every planned check is automated. Counts are from the last local run (2026-10-06
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend unit + integration (real PostgreSQL) | `cd backend && pytest` | **178 passed** |
+| Backend unit + integration (real PostgreSQL) | `cd backend && pytest` | **181 passed** |
 | Backend lint/format | `ruff check app tests && ruff format --check app tests` | clean |
 | Frontend typecheck + unit | `cd frontend && npx tsc -b && npx vitest run` | **11 passed** |
 | Frontend production build | `npx vite build` | OK (109 KB gzipped JS) |
-| E2E acceptance (production Docker image + PostgreSQL) | `cd e2e && npx playwright test` | **5 passed**, also on a fresh database and on re-runs |
+| E2E (production Docker image + PostgreSQL) | `cd e2e && npx playwright test` | **7 passed** (acceptance flow, HOD scope, phone layout, WCAG 2.1 AA, errors, app mode), on a fresh database and on re-runs |
+| UI/UX audit (all roles, 360/390/768/1024/1440 px) | Playwright + axe-core script | 0 overflow, 0 touch targets < 36 px on phones, 0 WCAG 2.1 AA violations, 0 JS errors |
+| Android app on emulator | `.github/workflows/android.yml` → `e2e/android/app-smoke.mjs` | see the Android workflow run and the `android-latest` release notes |
 | Dependency audit | `pip-audit`, `npm audit` | 0 known vulnerabilities |
 
 ## A. Authentication (`backend/tests/test_auth.py`, frontend `app.test.tsx`)
@@ -82,6 +84,24 @@ Unrelated reviewers are refused.
 Health, the full judge flow (23 steps), HOD scoping, 390 px mobile layout without horizontal
 scroll, unauthenticated API and unknown routes, and no JS errors or 5xx responses during the flow.
 Run against the production Docker image with `APP_ENV=production` and `Secure` cookies.
+
+## H. Navigation, layout and accessibility
+
+| ID | Test | Automated by |
+|---|---|---|
+| UX-01 | Phone bottom tab bar: 3 tabs for students, each page reachable, no horizontal overflow | E2E `phone layout: bottom navigation…` |
+| UX-02 | No WCAG 2.1 AA violations on login, dashboard, students, student detail, upload, reports, student home | E2E `key pages have no WCAG 2.1 AA violations` (axe-core) |
+| UX-03 | Desktop top navigation, account menu, sign out | E2E acceptance flow |
+
+## I. Android app
+
+| ID | Test | Automated by |
+|---|---|---|
+| APP-01 | Server picker rejects non-HTTPS servers and checks `/health` | E2E `native-app.spec.ts`, device smoke test |
+| APP-02 | Login issues a bearer token (no cookies), data loads cross-origin | E2E app mode, `test_mobile_login_returns_bearer_token_and_no_cookie` |
+| APP-03 | Logout revokes the token | E2E app mode, `test_bearer_token_authenticates_and_logout_revokes_it` |
+| APP-04 | CORS admits only the app origins | `test_cors_allows_only_configured_app_origins` |
+| APP-05 | Real APK on Android 14: first launch, student and admin flows, tabs, hardware back, layout | `e2e/android/app-smoke.mjs` on the emulator (screenshots uploaded) |
 
 ## Release gate
 

@@ -112,9 +112,12 @@ publishes it.
 
 ## Deployment
 
-See [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md). The short version on Render is
-**New → Blueprint →** select this repository **→ Apply**. `render.yaml` provisions
-PostgreSQL and the web service and generates `SECRET_KEY`.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/chsrvyt/hackathon-ieee/tree/claude/lucid-mccarthy-05cpem)
+
+One click (signed in to Render with GitHub access to this repository): `render.yaml` provisions
+PostgreSQL and the web service, generates `SECRET_KEY`, runs migrations and seeds the demo data.
+Manual alternative: Render → **New → Blueprint** → this repository → **Apply**. See
+[docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md).
 
 ## Documentation
 

@@ -25,3 +25,4 @@ e2e/playwright-report/
 .idea/
 .vscode/
 *.tsbuildinfo
+dist-apk/
