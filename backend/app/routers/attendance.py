@@ -108,7 +108,7 @@ def template(user: CurrentUser) -> PlainTextResponse:
 
 @router.get("/imports")
 def list_imports(db: DB, user: Admin) -> dict:
-    return {"items": reports.recent_imports(db, limit=20)}
+    return {"items": reports.recent_imports(db, user, limit=20)}
 
 
 @router.get("/student/{student_id}")

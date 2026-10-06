@@ -76,7 +76,7 @@ def overview(db: DB, user: Staff) -> dict:
         ),
     }
     if user.role == "ADMIN":
-        data["recent_imports"] = reports.recent_imports(db)
+        data["recent_imports"] = reports.recent_imports(db, user)
     return data
 
 

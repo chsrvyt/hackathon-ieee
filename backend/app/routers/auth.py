@@ -24,6 +24,8 @@ log = logging.getLogger("attendai.auth")
 class LoginThrottle:
     """In-process sliding window of failed logins per (client IP, email)."""
 
+    MAX_KEYS = 10_000
+
     def __init__(self) -> None:
         self._failures: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
@@ -43,6 +45,10 @@ class LoginThrottle:
     def fail(self, key: str) -> None:
         with self._lock:
             self._failures[key].append(time.monotonic())
+            if len(self._failures) > self.MAX_KEYS:  # bound memory under credential spraying
+                window = get_settings().login_window_minutes * 60
+                for stale in [k for k in self._failures if not self._prune(k, window)]:
+                    del self._failures[stale]
 
     def reset(self, key: str) -> None:
         with self._lock:

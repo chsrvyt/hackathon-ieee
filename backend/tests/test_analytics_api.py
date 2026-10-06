@@ -137,6 +137,12 @@ def test_health_and_error_contract(anon):
     assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY"
 
 
+def test_request_id_is_sanitised(anon):
+    assert anon.get("/health", headers={"X-Request-ID": "abc-123"}).headers["x-request-id"] == "abc-123"
+    echoed = anon.get("/health", headers={"X-Request-ID": "bad id;<script>"}).headers["x-request-id"]
+    assert echoed != "bad id;<script>" and echoed.isalnum()
+
+
 def test_subject_attendance_scoped(mentor, mentor_ece, db):
     from app.models import Subject
 

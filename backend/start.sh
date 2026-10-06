@@ -13,4 +13,5 @@ exec uvicorn app.main:app \
   --workers "${WEB_CONCURRENCY:-1}" \
   --proxy-headers \
   --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" \
-  --no-server-header
+  --no-server-header \
+  --no-access-log

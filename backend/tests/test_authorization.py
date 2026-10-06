@@ -79,6 +79,12 @@ def test_hod_cannot_import_other_department_rows(hod_ece):
     assert "outside your department scope" in r.json()["errors"][0]["message"]
 
 
+def test_hod_sees_only_own_import_history(hod_ece, admin):
+    assert admin.get("/api/attendance/imports").json()["items"]  # seed import by the admin
+    assert hod_ece.get("/api/attendance/imports").json()["items"] == []
+    assert hod_ece.get("/api/analytics/overview").json()["recent_imports"] == []
+
+
 def test_exam_cell_is_read_only(exam_cell, db):
     assert exam_cell.get("/api/analytics/overview").json()["total_students"] == 14
     assert exam_cell.get(f"/api/analytics/student/{student_id(db, 'E002')}").status_code == 200

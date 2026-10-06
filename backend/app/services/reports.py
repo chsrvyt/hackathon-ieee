@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..analytics.engine import SEVERITY
 from ..analytics.service import current_policy
-from ..models import AttendanceImport, CondonationRequest, Department, Projection, Student, Subject
+from ..models import AttendanceImport, CondonationRequest, Department, Projection, Student, Subject, User
 from ..serializers import iso, num
 
 HISTOGRAM_BUCKETS = [(0, 50), (50, 65), (65, 75), (75, 85), (85, 95), (95, 100.01)]
@@ -161,8 +161,11 @@ def pending_condonations(db: Session, scope: ColumnElement[bool]) -> int:
     )
 
 
-def recent_imports(db: Session, limit: int = 5) -> list[dict]:
-    imports = db.scalars(select(AttendanceImport).order_by(AttendanceImport.id.desc()).limit(limit))
+def recent_imports(db: Session, user: User, limit: int = 5) -> list[dict]:
+    query = select(AttendanceImport).order_by(AttendanceImport.id.desc()).limit(limit)
+    if user.department_id is not None:  # a department HOD only sees their own uploads
+        query = query.where(AttendanceImport.uploaded_by == user.id)
+    imports = db.scalars(query)
     return [
         {
             "id": i.id,

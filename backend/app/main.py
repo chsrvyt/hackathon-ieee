@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -17,6 +18,7 @@ from .errors import register_error_handlers
 from .routers import alerts, analytics, attendance, auth, condonation, meta, students
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+_REQUEST_ID_RE = re.compile(r"[A-Za-z0-9._-]{1,64}")
 CSRF_HEADER = "x-requested-with"
 CSRF_VALUE = "AttendAI"
 
@@ -61,7 +63,8 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
-        request_id = request.headers.get("x-request-id", "")[:64] or uuid.uuid4().hex[:16]
+        incoming = request.headers.get("x-request-id", "")
+        request_id = incoming if _REQUEST_ID_RE.fullmatch(incoming) else uuid.uuid4().hex[:16]
         request.state.request_id = request_id
         path = request.url.path
         # CSRF defence-in-depth: state-changing API calls must carry a custom header. Browsers
