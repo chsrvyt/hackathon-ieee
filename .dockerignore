@@ -1,0 +1,12 @@
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+frontend/dist
+e2e
+docs
+.git
+.github
+.env
+.env.*

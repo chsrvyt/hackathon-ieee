@@ -1,0 +1,35 @@
+# Render Blueprint: one Docker web service (API + SPA) and a managed PostgreSQL database.
+# Deploy: Render dashboard -> New -> Blueprint -> select this repository -> Apply.
+databases:
+  - name: attendai-db
+    plan: free
+    databaseName: attendai
+    user: attendai
+    ipAllowList: []  # no public access; the web service uses the private connection string
+
+services:
+  - type: web
+    name: attendai
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: attendai-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: WEB_CONCURRENCY
+        value: "1"
+      # Demo deployment: seed fictional data and show the demo-account panel on the login page.
+      # Set both to "false" for a real institution.
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: DEMO_MODE
+        value: "true"

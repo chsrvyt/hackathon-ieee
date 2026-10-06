@@ -1,0 +1,35 @@
+# Local production-like stack: PostgreSQL + the AttendAI container.
+#   docker compose up --build      ->  http://localhost:8000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: attendai
+      POSTGRES_USER: attendai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-attendai-local-only}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attendai -d attendai"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://attendai:${POSTGRES_PASSWORD:-attendai-local-only}@db:5432/attendai
+      # Local only. Production must provide a random SECRET_KEY (Render generates one).
+      SECRET_KEY: ${SECRET_KEY:-local-compose-secret-key-please-change-0123456789}
+      APP_ENV: production
+      COOKIE_SECURE: "false"   # plain http on localhost
+      SEED_DEMO_DATA: "true"
+      DEMO_MODE: "true"
+
+volumes:
+  pgdata:
