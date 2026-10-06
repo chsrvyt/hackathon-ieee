@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -18,6 +19,12 @@ def health_payload(db) -> tuple[int, dict]:
     except Exception:  # noqa: BLE001 - health must never raise
         return 503, {"status": "error", "database": "unavailable"}
     return 200, {"status": "ok"}
+
+
+@router.get("/version")
+def version() -> dict:
+    """Public: which commit is serving, so a pipeline can wait for a redeploy before testing it."""
+    return {"commit": os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT") or None}
 
 
 @router.get("/departments")

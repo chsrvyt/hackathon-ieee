@@ -1,0 +1,131 @@
+name: Live verification
+
+# Verifies the deployed AttendAI instance end to end from GitHub's runners.
+# On push: waits until Render serves the pushed commit (GET /api/version), then tests it.
+# Manually: Actions -> Live verification -> Run workflow -> public URL.
+on:
+  push:
+    branches: [main, claude/lucid-mccarthy-05cpem]
+    paths-ignore: ["docs/**", "**/*.md"]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Public AttendAI URL (https://...)"
+        required: true
+      android:
+        description: "Also run the Android app against this server on an emulator"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: read # download the latest APK build artifact
+
+concurrency:
+  group: live-verify
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+env:
+  LIVE_URL: ${{ inputs.url || vars.ATTENDAI_SERVER_URL || 'https://attendai-gjk1.onrender.com' }}
+
+jobs:
+  web:
+    name: Website (acceptance, security, responsive, accessibility)
+    runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: ${{ inputs.url || vars.ATTENDAI_SERVER_URL || 'https://attendai-gjk1.onrender.com' }}
+      E2E_PRODUCTION: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check URL
+        run: |
+          case "$E2E_BASE_URL" in https://*) ;; *) echo "::error::URL must start with https://"; exit 1;; esac
+      - name: Wake the service and check /health (free instances sleep when idle)
+        run: |
+          for i in $(seq 1 36); do
+            body=$(curl -s --max-time 20 "$E2E_BASE_URL/health" || true)
+            echo "attempt $i: ${body:-no response}"
+            [ "$body" = '{"status":"ok"}' ] && exit 0
+            sleep 10
+          done
+          echo "::error::$E2E_BASE_URL/health did not return {\"status\":\"ok\"}"; exit 1
+      - name: Wait for the pushed commit to be serving
+        if: github.event_name == 'push'
+        run: |
+          live=""
+          for i in $(seq 1 45); do
+            live=$(curl -s --max-time 20 "$E2E_BASE_URL/api/version" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit") or "")' 2>/dev/null || true)
+            echo "attempt $i: serving ${live:-unknown}, want $GITHUB_SHA"
+            if [ -n "$live" ] && [ "${GITHUB_SHA#"$live"}" != "$GITHUB_SHA" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "::warning::$GITHUB_SHA is not serving after 15 minutes (serving: ${live:-unknown}); testing the version that is live"
+      - name: Deployed version
+        run: |
+          echo "url=$E2E_BASE_URL"; curl -s "$E2E_BASE_URL/health"; echo; curl -s "$E2E_BASE_URL/api/version"; echo
+          curl -s "$E2E_BASE_URL/" | grep -o '/assets/[^"]*' | sort -u
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: e2e
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Run the live test suite
+        working-directory: e2e
+        run: npx playwright test --reporter=list,html
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+
+  android:
+    name: Android app against the live server
+    if: ${{ github.event_name == 'push' || inputs.android }}
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Latest debug APK from the Android workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          RUN=$(gh run list --workflow android.yml --branch "$GITHUB_REF_NAME" --status success -L 1 --json databaseId -q '.[0].databaseId')
+          [ -n "$RUN" ] || RUN=$(gh run list --workflow android.yml --status success -L 1 --json databaseId -q '.[0].databaseId')
+          echo "using Android workflow run $RUN"
+          gh run download "$RUN" -n attendai-apk -D dist-apk
+          ls -la dist-apk
+          echo "APK=$(ls dist-apk/*-debug.apk | head -1)" >> "$GITHUB_ENV"
+      - name: Install Playwright (Android driver)
+        working-directory: e2e
+        run: npm ci
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the app on an emulator against the live HTTPS server
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb install -r "${{ env.APK }}"
+            cd e2e && APP_SERVER_URL="${{ env.LIVE_URL }}" SCREENSHOT_DIR="$GITHUB_WORKSPACE/live-android-screenshots" node android/app-smoke.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-android-screenshots
+          path: live-android-screenshots/
+          if-no-files-found: ignore

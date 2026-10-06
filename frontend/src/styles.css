@@ -906,7 +906,7 @@ th.num {
 .hist {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  grid-auto-columns: minmax(0, 1fr);
   align-items: end;
   gap: 8px;
   height: 150px;
@@ -933,6 +933,7 @@ th.num {
   font-size: 0.7rem;
   color: var(--muted);
   white-space: nowrap;
+  text-align: center;
 }
 .chart svg {
   width: 100%;
@@ -1304,14 +1305,22 @@ th.num {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+  /* phones: compact header, form directly below it (no stretched rows or centred gaps) */
   .login-wrap {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100dvh;
   }
   .login-aside {
-    padding: calc(28px + var(--safe-top)) 20px 28px;
+    padding: calc(20px + var(--safe-top)) 20px 22px;
+    justify-content: flex-start;
   }
   .login-aside h1 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
+  }
+  .login-main {
+    place-items: start center;
+    padding: 22px 16px calc(24px + var(--safe-bottom));
   }
   .page-head h1 {
     font-size: 1.3rem;
@@ -1389,6 +1398,15 @@ th.num {
   }
   .card {
     padding: 16px 14px;
+  }
+  /* "95–100%" does not fit six columns on a 320 px screen: wrap after the dash, keep bars aligned */
+  .hist {
+    gap: 4px;
+  }
+  .hist-label {
+    white-space: normal;
+    line-height: 1.2;
+    min-height: 2.4em;
   }
 }
 @media print {

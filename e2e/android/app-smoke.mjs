@@ -33,9 +33,22 @@ async function signIn(email) {
 }
 const tabs = () => page.getByRole("navigation", { name: "Main navigation" });
 
-// 1. First launch: server picker
-await page.getByRole("heading", { name: "Connect to your institution" }).waitFor({ timeout: 90_000 });
+// 0. No native action bar or title strip above the web UI (the WebView fills the window)
+const ui = (await device.shell("uiautomator dump /sdcard/attendai-ui.xml >/dev/null; cat /sdcard/attendai-ui.xml")).toString();
+if (!ui.includes("<hierarchy")) console.log("uiautomator dump unavailable; action bar check skipped");
+else if (/resource-id="[^"]*:id\/(action_bar|action_bar_container|action_bar_title|title)"/.test(ui))
+  throw new Error("a native action bar is visible above the app");
+else console.log("no native action bar");
+
+// 1. First launch: server picker, or the server baked into this build (then switch to SERVER)
+const picker = page.getByRole("heading", { name: "Connect to your institution" });
+const chip = page.getByText(/^Server:/);
+await picker.or(chip).first().waitFor({ timeout: 90_000 });
 await shot("01-first-launch-server");
+if (await chip.isVisible()) {
+  console.log(`preconfigured ${await chip.innerText()}`);
+  await page.getByRole("button", { name: "Change" }).click();
+}
 await page.getByLabel("Server address").fill(SERVER);
 await page.getByRole("button", { name: "Connect" }).click();
 await page.getByText(/^Server:/).waitFor();

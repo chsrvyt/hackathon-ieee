@@ -149,3 +149,11 @@ def test_subject_attendance_scoped(mentor, mentor_ece, db):
     cs101 = db.scalar(select(Subject.id).where(Subject.code == "CS101"))
     assert len(mentor.get(f"/api/attendance/subject/{cs101}").json()["students"]) == 8
     assert mentor_ece.get(f"/api/attendance/subject/{cs101}").json()["students"] == []
+
+
+def test_version_reports_deployed_commit_without_auth(anon, monkeypatch):
+    monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
+    monkeypatch.delenv("GIT_COMMIT", raising=False)
+    assert anon.get("/api/version").json() == {"commit": None}
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "abc123")
+    assert anon.get("/api/version").json() == {"commit": "abc123"}
