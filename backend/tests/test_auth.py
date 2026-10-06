@@ -94,6 +94,13 @@ def test_state_changing_request_without_csrf_header_rejected(student):
     assert r.json()["error"]["code"] == "CSRF_CHECK_FAILED"
 
 
+def test_malformed_json_gives_clear_error_without_internals(anon):
+    r = anon.post("/api/auth/login", content=b"{bad json", headers={**CSRF, "Content-Type": "application/json"})
+    assert r.status_code == 422
+    assert r.json()["error"]["message"] == "The request body is not valid JSON."
+    assert "Traceback" not in r.text and 'File "' not in r.text
+
+
 def test_login_validation_error_contract(anon):
     r = anon.post("/api/auth/login", json={"email": "x"}, headers=CSRF)
     assert r.status_code == 422

@@ -66,6 +66,9 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
         details = []
         for err in exc.errors():
+            if err.get("type") == "json_invalid":  # loc holds a character offset, not a field
+                details.append({"field": None, "message": "The request body is not valid JSON."})
+                continue
             loc = [str(part) for part in err.get("loc", ()) if part not in ("body", "query", "path")]
             details.append({"field": ".".join(loc) or None, "message": err.get("msg", "Invalid value")})
         first = details[0]["message"] if details else "Invalid request."
