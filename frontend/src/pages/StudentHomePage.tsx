@@ -1,9 +1,9 @@
+import { Link } from "react-router-dom";
 import { useStudentAnalytics, useStudentCondonations } from "../api/hooks";
 import { useAuth } from "../auth/AuthContext";
 import { AlertsList } from "../components/AlertsList";
-import { CondonationCard, CondonationForm } from "../components/Condonation";
 import { StudentAnalyticsView } from "../components/StudentAnalyticsView";
-import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { EmptyState, ErrorState, Loading, StatusBadge, fmtDateTime } from "../components/ui";
 
 export function StudentHomePage() {
   const { user } = useAuth();
@@ -57,7 +57,6 @@ export function StudentHomePage() {
             <h2 id="condonation-heading">Condonation</h2>
           </div>
           <div className="stack">
-            {analytics.data && <CondonationForm analytics={analytics.data} />}
             {requests.isPending ? (
               <Loading />
             ) : requests.isError ? (
@@ -65,13 +64,28 @@ export function StudentHomePage() {
             ) : requests.data.items.length === 0 ? (
               <p className="small muted">You have not submitted any condonation requests.</p>
             ) : (
-              <div className="stack">
-                <h3>Your requests</h3>
-                {requests.data.items.map((r) => (
-                  <CondonationCard key={r.id} req={r} canWithdraw />
-                ))}
+              <div className="row">
+                <StatusBadge status={requests.data.items[0].status} />
+                <span className="small">
+                  Latest request
+                  {requests.data.items[0].subject ? ` (${requests.data.items[0].subject.name})` : " (overall)"} ·{" "}
+                  {fmtDateTime(requests.data.items[0].created_at)}
+                </span>
               </div>
             )}
+            {analytics.data && (analytics.data.risk_level === "WARNING" || analytics.data.risk_level === "CRITICAL") ? (
+              <p className="small">
+                Your attendance is at risk. If the absences had a valid reason, you can ask your mentor to condone
+                the shortage.
+              </p>
+            ) : (
+              <p className="small muted">Requests open when your attendance is at risk (WARNING or CRITICAL).</p>
+            )}
+            <div>
+              <Link className="btn btn-primary" to="/condonation">
+                Open condonation requests
+              </Link>
+            </div>
           </div>
         </section>
       </div>

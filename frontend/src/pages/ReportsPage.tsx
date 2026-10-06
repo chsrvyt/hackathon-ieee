@@ -13,8 +13,7 @@ import {
   StatusBadge,
   TrendIndicator,
   fmtDateTime,
-  pct,
-} from "../components/ui";
+  pct, TableWrap } from "../components/ui";
 
 export function ReportsPage() {
   const departments = useDepartments();
@@ -77,7 +76,7 @@ export function ReportsPage() {
               <a className="btn btn-primary" href={`${API_BASE}/reports/department/${r.department.id}/export.csv`} download>
                 Export shortage list (CSV)
               </a>
-              <button className="btn" onClick={() => window.print()}>
+              <button className="btn desktop-only" onClick={() => window.print()}>
                 Print
               </button>
             </div>
@@ -109,7 +108,7 @@ export function ReportsPage() {
             <div className="card-head">
               <h2>Subject pattern</h2>
             </div>
-            <div className="table-wrap">
+            <TableWrap label="Subject pattern">
               <table>
                 <thead>
                   <tr>
@@ -124,19 +123,19 @@ export function ReportsPage() {
                 <tbody>
                   {r.subjects.map((s) => (
                     <tr key={s.subject.id}>
-                      <td>
+                      <td className="cell-title">
                         <strong>{s.subject.name}</strong> <span className="mono small muted">{s.subject.code}</span>
                       </td>
-                      <td className="num">{s.students}</td>
-                      <td className="num">{pct(s.average_percentage)}</td>
-                      <td className="num">{s.below_target}</td>
-                      <td className="num">{s.critical}</td>
-                      <td className="num">{s.warning}</td>
+                      <td className="num cell-num" data-label="Students">{s.students}</td>
+                      <td className="num cell-num" data-label="Average">{pct(s.average_percentage)}</td>
+                      <td className="num cell-num" data-label="Below target">{s.below_target}</td>
+                      <td className="num cell-num" data-label="Critical">{s.critical}</td>
+                      <td className="num cell-num" data-label="Warning">{s.warning}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableWrap>
           </section>
           <section className="card">
             <div className="card-head">
@@ -146,7 +145,7 @@ export function ReportsPage() {
             {r.shortage_students.length === 0 ? (
               <EmptyState title="No shortages">Every student meets the target overall and in every subject.</EmptyState>
             ) : (
-              <div className="table-wrap">
+              <TableWrap label="Shortage list">
                 <table>
                   <thead>
                     <tr>
@@ -162,31 +161,37 @@ export function ReportsPage() {
                   <tbody>
                     {r.shortage_students.map((s) => (
                       <tr key={s.id}>
-                        <td>
+                        <td className="cell-title">
                           <Link to={`/students/${s.id}`}>
                             <strong>{s.name}</strong>
                           </Link>
                           <div className="small muted mono">{s.roll_number}</div>
                         </td>
-                        <td className="num">{pct(s.current_percentage)}</td>
-                        <td className="num">{pct(s.projected_percentage)}</td>
-                        <td>
+                        <td className="num cell-num" data-label="Overall">
+                          {pct(s.current_percentage)}
+                        </td>
+                        <td className="num cell-num" data-label="Projected">
+                          {pct(s.projected_percentage)}
+                        </td>
+                        <td className="cell-num" data-label="Trend">
                           <TrendIndicator trend={s.trend} />
                         </td>
-                        <td>
+                        <td className="cell-badge">
                           <RiskBadge level={s.risk_level} />
                         </td>
-                        <td className="small">
+                        <td className="small cell-wide" data-label="Subjects below target">
                           {s.subjects_below_target.length
                             ? s.subjects_below_target.map((x) => `${x.code} ${pct(x.current_percentage)}`).join(", ")
                             : "—"}
                         </td>
-                        <td>{s.latest_condonation_status ? <StatusBadge status={s.latest_condonation_status} /> : "—"}</td>
+                        <td className="cell-wide" data-label="Condonation">
+                          {s.latest_condonation_status ? <StatusBadge status={s.latest_condonation_status} /> : "—"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableWrap>
             )}
             <p className="small muted" style={{ marginTop: 10 }}>
               This report lists attendance below the configured threshold. It is not an examination-eligibility ruling;

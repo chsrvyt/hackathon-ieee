@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { API_BASE, ApiError, errorMessage } from "../api/client";
 import { useImports, useUpload } from "../api/hooks";
 import type { UploadResult } from "../api/types";
-import { RiskBadge, fmtDateTime } from "../components/ui";
+import { IconDownload, IconUpload } from "../components/icons";
+import { RiskBadge, TableWrap, fmtDateTime } from "../components/ui";
 
 const MAX_MB = 5;
 const REQUIRED = ["student_roll", "subject_code", "date", "classes_conducted", "classes_attended"];
@@ -70,19 +71,26 @@ export function UploadPage() {
           </p>
         </div>
         <a className="btn" href={`${API_BASE}/attendance/template.csv`} download>
+          <IconDownload size={16} />
           Download CSV template
         </a>
       </div>
 
       <div className="grid grid-2">
         <form className="card stack" onSubmit={submit} aria-label="Attendance upload">
-          <div
-            className={`dropzone${drag ? " drag" : ""}`}
-            role="button"
-            tabIndex={0}
+          <input
+            ref={input}
+            id="attendance-file"
+            type="file"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="sr-only file-input"
             aria-describedby="file-help"
-            onClick={() => input.current?.click()}
-            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && input.current?.click()}
+            data-testid="file-input"
+            onChange={(e) => choose(e.target.files?.[0])}
+          />
+          <label
+            htmlFor="attendance-file"
+            className={`dropzone${drag ? " drag" : ""}`}
             onDragOver={(e) => {
               e.preventDefault();
               setDrag(true);
@@ -90,20 +98,19 @@ export function UploadPage() {
             onDragLeave={() => setDrag(false)}
             onDrop={onDrop}
           >
+            <IconUpload size={26} />
             <strong>{file ? file.name : "Choose a CSV or XLSX file"}</strong>
-            <div className="small muted" id="file-help">
-              {file ? `${(file.size / 1024).toFixed(1)} KB · click to change` : `Drag and drop, or click to browse · max ${MAX_MB} MB`}
-            </div>
-            <input
-              ref={input}
-              type="file"
-              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              className="sr-only"
-              aria-label="Attendance file"
-              data-testid="file-input"
-              onChange={(e) => choose(e.target.files?.[0])}
-            />
-          </div>
+            <span className="small muted" id="file-help">
+              {file ? (
+                `${(file.size / 1024).toFixed(1)} KB · tap or click to change`
+              ) : (
+                <>
+                  <span className="pointer-fine">Drag and drop, or click to browse</span>
+                  <span className="pointer-coarse">Tap to choose a file</span> · max {MAX_MB} MB
+                </>
+              )}
+            </span>
+          </label>
 
           <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0, gap: 8 }}>
             <legend className="small" style={{ fontWeight: 700, marginBottom: 6 }}>
@@ -212,7 +219,7 @@ export function UploadPage() {
           <h2 id="history-heading">Import history</h2>
         </div>
         {imports.data && imports.data.items.length > 0 ? (
-          <div className="table-wrap">
+          <TableWrap label="Import history">
             <table>
               <thead>
                 <tr>
@@ -227,21 +234,27 @@ export function UploadPage() {
               <tbody>
                 {imports.data.items.map((i) => (
                   <tr key={i.id}>
-                    <td className="small">{fmtDateTime(i.created_at)}</td>
-                    <td className="mono small">{i.filename}</td>
-                    <td>
+                    <td className="small cell-num" data-label="When">
+                      {fmtDateTime(i.created_at)}
+                    </td>
+                    <td className="mono small cell-title">{i.filename}</td>
+                    <td className="cell-badge">
                       <span className={`badge ${i.status === "COMPLETED" ? "risk-SAFE" : "risk-CRITICAL"}`}>{i.status}</span>
                     </td>
-                    <td className="num">
+                    <td className="num cell-num" data-label="Rows">
                       {i.status === "COMPLETED" ? `${i.rows_inserted} new · ${i.rows_updated} updated` : `${i.rows_rejected} rejected`}
                     </td>
-                    <td>{i.mode}</td>
-                    <td>{i.uploaded_by ?? "—"}</td>
+                    <td className="cell-num" data-label="Mode">
+                      {i.mode}
+                    </td>
+                    <td className="cell-num" data-label="By">
+                      {i.uploaded_by ?? "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         ) : (
           <p className="small muted">{imports.isPending ? "Loading…" : "No imports yet."}</p>
         )}
@@ -252,7 +265,7 @@ export function UploadPage() {
 
 function IssueTable({ issues }: { issues: UploadResult["errors"] }) {
   return (
-    <div className="table-wrap">
+    <TableWrap label="Validation problems">
       <table>
         <thead>
           <tr>
@@ -265,15 +278,21 @@ function IssueTable({ issues }: { issues: UploadResult["errors"] }) {
         <tbody>
           {issues.map((e, i) => (
             <tr key={i}>
-              <td className="num">{e.row ?? "—"}</td>
-              <td className="mono small">{e.column ?? "—"}</td>
-              <td className="mono small">{e.value ?? "—"}</td>
-              <td>{e.message}</td>
+              <td className="num cell-num" data-label="Row">
+                {e.row ?? "—"}
+              </td>
+              <td className="mono small cell-num" data-label="Column">
+                {e.column ?? "—"}
+              </td>
+              <td className="mono small cell-num" data-label="Value">
+                {e.value ?? "—"}
+              </td>
+              <td className="cell-wide">{e.message}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableWrap>
   );
 }
 
@@ -313,7 +332,7 @@ function ResultPanel({ result }: { result: UploadResult }) {
       {result.risk_changes.length > 0 && (
         <div>
           <h3 style={{ marginBottom: 8 }}>Risk level changes from this import</h3>
-          <div className="table-wrap">
+          <TableWrap label="Risk level changes">
             <table>
               <thead>
                 <tr>
@@ -325,21 +344,23 @@ function ResultPanel({ result }: { result: UploadResult }) {
               <tbody>
                 {result.risk_changes.map((c) => (
                   <tr key={c.student_id}>
-                    <td>
+                    <td className="cell-title">
                       <Link to={`/students/${c.student_id}`}>
                         <strong>{c.name}</strong>
                       </Link>{" "}
                       <span className="mono small muted">{c.roll_number}</span>
                     </td>
-                    <td>{c.previous ? <RiskBadge level={c.previous} /> : <span className="muted">new</span>}</td>
-                    <td>
+                    <td className="cell-num" data-label="Before">
+                      {c.previous ? <RiskBadge level={c.previous} /> : <span className="muted">new</span>}
+                    </td>
+                    <td className="cell-num" data-label="After">
                       <RiskBadge level={c.current} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         </div>
       )}
       {result.warnings.length > 0 && (

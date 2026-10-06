@@ -1,7 +1,7 @@
 import type { StudentAnalytics } from "../api/types";
 import { RecoveryCalculator } from "./RecoveryCalculator";
 import { TimelineChart } from "./TimelineChart";
-import { AttendanceBar, EmptyState, RiskBadge, TrendIndicator, fmtDate, pct } from "./ui";
+import { AttendanceBar, EmptyState, RiskBadge, TrendIndicator, fmtDate, pct, TableWrap } from "./ui";
 
 function tone(level: string) {
   return level === "CRITICAL" ? "crit" : level === "WARNING" ? "warn" : level === "SAFE" ? "safe" : "";
@@ -146,7 +146,7 @@ export function StudentAnalyticsView({ data, audience }: { data: StudentAnalytic
           <h2 id="subjects-heading">Subject-wise attendance</h2>
           <span className="hint">Each subject must also meet the {data.target_percentage}% target</span>
         </div>
-        <div className="table-wrap">
+        <TableWrap label="Subject-wise attendance">
           <table>
             <thead>
               <tr>
@@ -162,27 +162,29 @@ export function StudentAnalyticsView({ data, audience }: { data: StudentAnalytic
             <tbody>
               {data.subjects.map((s) => (
                 <tr key={s.subject.id}>
-                  <td>
+                  <td className="cell-title">
                     <strong>{s.subject.name}</strong>
                     <div className="small muted mono">{s.subject.code}</div>
                   </td>
-                  <td className="num">
+                  <td className="num cell-num" data-label="Attended">
                     {s.classes_attended}/{s.classes_conducted}
                   </td>
-                  <td>
+                  <td className="cell-num" data-label="Current">
                     <div className="small" style={{ fontWeight: 600 }}>
                       {pct(s.current_percentage)}
                     </div>
                     <AttendanceBar value={s.current_percentage} target={s.target_percentage} level={s.risk_level} />
                   </td>
-                  <td className="num">{pct(s.projected_percentage)}</td>
-                  <td>
+                  <td className="num cell-num" data-label="Projected">
+                    {pct(s.projected_percentage)}
+                  </td>
+                  <td className="cell-num" data-label="Trend">
                     <TrendIndicator trend={s.trend} />
                   </td>
-                  <td>
+                  <td className="cell-badge">
                     <RiskBadge level={s.risk_level} />
                   </td>
-                  <td className="reason-cell small">
+                  <td className="reason-cell small cell-wide" data-label="Next step">
                     {s.recovery.status === "RECOVERABLE"
                       ? `Attend next ${s.recovery.classes_required} classes`
                       : s.recovery.status === "NOT_RECOVERABLE_THIS_TERM"
@@ -195,7 +197,7 @@ export function StudentAnalyticsView({ data, audience }: { data: StudentAnalytic
               ))}
             </tbody>
           </table>
-        </div>
+        </TableWrap>
         <details style={{ marginTop: 12 }}>
           <summary className="small" style={{ cursor: "pointer" }}>
             Subject explanations

@@ -36,7 +36,7 @@ export function StudentDetailPage() {
             </p>
           )}
         </div>
-        <button className="btn no-print" onClick={() => window.print()}>
+        <button className="btn no-print desktop-only" onClick={() => window.print()}>
           Print summary
         </button>
       </div>

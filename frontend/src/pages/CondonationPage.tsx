@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 import { useCondonations } from "../api/hooks";
 import type { CondonationStatus } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
 import { CondonationCard } from "../components/Condonation";
 import { EmptyState, ErrorState, Loading } from "../components/ui";
+import { StudentRequestsPage } from "./StudentRequestsPage";
 
 const TABS: (CondonationStatus | "ALL")[] = ["PENDING", "APPROVED", "REJECTED", "WITHDRAWN", "ALL"];
 
@@ -14,8 +14,7 @@ export function CondonationPage() {
   const isStudent = user?.role === "STUDENT";
   const list = useCondonations(tab, !isStudent);
 
-  // Students manage their own requests from their dashboard.
-  if (isStudent) return <Navigate to="/me" replace />;
+  if (isStudent) return <StudentRequestsPage />;
 
   const canReview = list.data?.can_review ?? false;
   return (

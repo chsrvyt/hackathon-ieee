@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDepartments, useStudents } from "../api/hooks";
 import { useAuth } from "../auth/AuthContext";
-import { EmptyState, ErrorState, Loading, RiskBadge, TrendIndicator, pct } from "../components/ui";
+import { EmptyState, ErrorState, Loading, RiskBadge, TrendIndicator, pct, TableWrap } from "../components/ui";
 
 const PAGE_SIZE = 20;
 
@@ -112,7 +112,7 @@ export function StudentsPage() {
           <EmptyState title="No students match these filters" />
         ) : (
           <>
-            <div className="table-wrap">
+            <TableWrap label="Students">
               <table>
                 <thead>
                   <tr>
@@ -127,34 +127,42 @@ export function StudentsPage() {
                 </thead>
                 <tbody>
                   {students.data.items.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="clickable"
-                      tabIndex={0}
-                      onClick={() => navigate(`/students/${s.id}`)}
-                      onKeyDown={(e) => e.key === "Enter" && navigate(`/students/${s.id}`)}
-                    >
-                      <td>
+                    <tr key={s.id} className="clickable" onClick={() => navigate(`/students/${s.id}`)}>
+                      <td className="cell-title">
                         <Link to={`/students/${s.id}`} onClick={(e) => e.stopPropagation()}>
                           <strong>{s.name}</strong>
                         </Link>
-                        <div className="small muted mono">{s.roll_number}</div>
+                        <div className="small muted mono">
+                          {s.roll_number}
+                          <span className="cards-only">
+                            {" "}
+                            · {s.department.code} · Sem {s.semester}
+                          </span>
+                        </div>
                       </td>
-                      <td>
-                        {s.department.code} · {s.semester}
+                      <td className="hide-cards">
+                        {s.department.code} · Sem {s.semester}
                       </td>
-                      <td className="num">{pct(s.analytics?.current_percentage)}</td>
-                      <td className="num">{pct(s.analytics?.projected_percentage)}</td>
-                      <td>{s.analytics ? <TrendIndicator trend={s.analytics.trend} /> : "—"}</td>
-                      <td>
+                      <td className="num cell-num" data-label="Current">
+                        {pct(s.analytics?.current_percentage)}
+                      </td>
+                      <td className="num cell-num" data-label="Projected">
+                        {pct(s.analytics?.projected_percentage)}
+                      </td>
+                      <td className="cell-num" data-label="Trend">
+                        {s.analytics ? <TrendIndicator trend={s.analytics.trend} /> : "—"}
+                      </td>
+                      <td className="cell-badge">
                         <RiskBadge level={s.analytics?.risk_level ?? "NO_DATA"} />
                       </td>
-                      <td className="reason-cell small">{s.analytics?.reason ?? "No attendance recorded yet."}</td>
+                      <td className="reason-cell small cell-wide">
+                        {s.analytics?.reason ?? "No attendance recorded yet."}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableWrap>
             <div className="pager">
               <span className="small muted">
                 {total} student{total === 1 ? "" : "s"} · page {page} of {pages}

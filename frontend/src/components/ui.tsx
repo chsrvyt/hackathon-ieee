@@ -179,3 +179,16 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     </div>
   );
 }
+
+/**
+ * Wrapper for data tables: keyboard-scrollable when wide (WCAG), and rendered as stacked cards on
+ * phones. Cells opt into the card layout with classes: cell-title, cell-badge, cell-meta, cell-num
+ * (shows its data-label above the value) and cell-wide.
+ */
+export function TableWrap({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="table-wrap table-cards" role="region" aria-label={label} tabIndex={0}>
+      {children}
+    </div>
+  );
+}

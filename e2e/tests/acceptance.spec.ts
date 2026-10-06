@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { ACCOUNTS, login, logout, trackConsole } from "./helpers";
 
@@ -6,6 +7,9 @@ const SAMPLE_CSV = fileURLToPath(new URL("../../sample_data/attendance_sample.cs
 const INVALID_CSV = fileURLToPath(new URL("../../sample_data/attendance_invalid_example.csv", import.meta.url));
 
 test.describe.configure({ mode: "serial" });
+
+/** The visible main navigation: top bar on desktop, bottom tab bar on phones. */
+const mainNav = (page: Page) => page.getByRole("navigation", { name: "Main navigation" });
 
 test("health endpoint responds", async ({ request }) => {
   const res = await request.get("/health");
@@ -84,6 +88,8 @@ test("full judge demo flow: upload -> analytics -> mentor -> condonation -> repo
     await login(page, ACCOUNTS.student);
     await expect(page.getByRole("heading", { name: "My attendance" })).toBeVisible();
     await expect(page.getByLabel("Why this risk level")).toBeVisible();
+    await mainNav(page).getByRole("link", { name: "Condonation" }).click();
+    await expect(page.getByRole("heading", { name: "Condonation requests" })).toBeVisible();
     // Keep re-runs clean: withdraw a leftover pending request from an earlier run.
     const leftover = page.getByRole("button", { name: "Withdraw request" });
     if (await leftover.count()) {
@@ -121,10 +127,12 @@ test("full judge demo flow: upload -> analytics -> mentor -> condonation -> repo
 
   await test.step("22. student sees the decision and an alert", async () => {
     await login(page, ACCOUNTS.student);
+    await expect(page.getByRole("heading", { name: "My attendance" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Alerts/ }).getByText(/was approved by Prof\. Kavita Rao/).first()).toBeVisible();
+    await mainNav(page).getByRole("link", { name: "Condonation" }).click();
     const card = page.getByRole("article").filter({ hasText: stamp });
     await expect(card.getByText("APPROVED", { exact: true })).toBeVisible();
     await expect(card).toContainText("Approved by Prof. Kavita Rao");
-    await expect(page.getByRole("region", { name: /Alerts/ }).getByText(/was approved by Prof\. Kavita Rao/).first()).toBeVisible();
     await logout(page);
   });
 
@@ -156,12 +164,38 @@ test("HOD is limited to their department", async ({ page }) => {
   await expect(page.getByText("Access denied")).toBeVisible();
 });
 
-test("student dashboard fits a phone screen without horizontal scrolling", async ({ page }) => {
+test("phone layout: bottom navigation, no horizontal scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page, ACCOUNTS.student);
   await expect(page.getByRole("heading", { name: "My attendance" })).toBeVisible();
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
+  const tabs = mainNav(page);
+  await expect(tabs.getByRole("link")).toHaveCount(3); // Home, Requests, Alerts
+  for (const [tab, heading] of [["Requests", "Condonation requests"], ["Alerts", "Alerts"], ["Home", "My attendance"]]) {
+    await tabs.getByRole("link", { name: tab }).click();
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `horizontal overflow on ${tab}`).toBeLessThanOrEqual(1);
+  }
+});
+
+test("key pages have no WCAG 2.1 AA violations", async ({ page }) => {
+  const scan = async (label: string) => {
+    const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    const summary = result.violations.map((v) => `${label}: ${v.id} (${v.impact}) ${v.nodes[0]?.target}`);
+    expect(summary).toEqual([]);
+  };
+  await page.goto("/login");
+  await scan("login");
+  await login(page, ACCOUNTS.admin);
+  for (const path of ["/dashboard", "/students", "/students/3", "/upload", "/reports"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    await scan(path);
+  }
+  await logout(page);
+  await login(page, ACCOUNTS.student);
+  await page.waitForLoadState("networkidle");
+  await scan("/me");
 });
 
 test("unauthenticated API access and unknown routes are handled", async ({ request, page }) => {

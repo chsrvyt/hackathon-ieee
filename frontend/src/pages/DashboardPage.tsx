@@ -13,14 +13,13 @@ import {
   Stat,
   TrendIndicator,
   fmtDateTime,
-  pct,
-} from "../components/ui";
+  pct, TableWrap } from "../components/ui";
 
 export function RiskTable({ rows, compact }: { rows: RiskRow[]; compact?: boolean }) {
   const navigate = useNavigate();
   if (rows.length === 0) return <EmptyState title="No students at risk">Everyone in scope is on track.</EmptyState>;
   return (
-    <div className="table-wrap">
+    <TableWrap label="At-risk students">
       <table>
         <thead>
           <tr>
@@ -35,35 +34,35 @@ export function RiskTable({ rows, compact }: { rows: RiskRow[]; compact?: boolea
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr
-              key={r.id}
-              className="clickable"
-              onClick={() => navigate(`/students/${r.id}`)}
-              onKeyDown={(e) => e.key === "Enter" && navigate(`/students/${r.id}`)}
-              tabIndex={0}
-              aria-label={`Open ${r.name}`}
-            >
-              <td>
+            <tr key={r.id} className="clickable" onClick={() => navigate(`/students/${r.id}`)}>
+              <td className="cell-title">
                 <Link to={`/students/${r.id}`} onClick={(e) => e.stopPropagation()}>
                   <strong>{r.name}</strong>
                 </Link>
-                <div className="small muted mono">{r.roll_number}</div>
+                <div className="small muted mono">
+                  {r.roll_number}
+                  <span className="cards-only"> · {r.department}</span>
+                </div>
               </td>
-              {!compact && <td>{r.department}</td>}
-              <td className="num">{pct(r.current_percentage)}</td>
-              <td className="num">{pct(r.projected_percentage)}</td>
-              <td>
+              {!compact && <td className="hide-cards">{r.department}</td>}
+              <td className="num cell-num" data-label="Current">
+                {pct(r.current_percentage)}
+              </td>
+              <td className="num cell-num" data-label="Projected">
+                {pct(r.projected_percentage)}
+              </td>
+              <td className="cell-num" data-label="Trend">
                 <TrendIndicator trend={r.trend} />
               </td>
-              <td>
+              <td className="cell-badge">
                 <RiskBadge level={r.risk_level} />
               </td>
-              <td className="reason-cell small">{r.reason}</td>
+              <td className="reason-cell small cell-wide">{r.reason}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableWrap>
   );
 }
 
@@ -104,7 +103,7 @@ export function DashboardPage() {
             Scope: {o.scope.label} · target {o.target_percentage}% attendance
           </p>
         </div>
-        <div className="row no-print">
+        <div className="row no-print desktop-only">
           {user.role === "ADMIN" && (
             <Link className="btn btn-primary" to="/upload">
               Upload attendance
@@ -174,7 +173,7 @@ export function DashboardPage() {
                 <div className="card-head">
                   <h2 id="dept-heading">Departments</h2>
                 </div>
-                <div className="table-wrap">
+                <TableWrap label="Departments">
                   <table>
                     <thead>
                       <tr>
@@ -188,19 +187,19 @@ export function DashboardPage() {
                     <tbody>
                       {o.departments.map((dep) => (
                         <tr key={dep.department.id}>
-                          <td>
+                          <td className="cell-title">
                             <strong>{dep.department.code}</strong>
                             <div className="small muted">{dep.department.name}</div>
                           </td>
-                          <td className="num">{dep.students}</td>
-                          <td className="num">{pct(dep.average_percentage)}</td>
-                          <td className="num">{dep.shortage_count}</td>
-                          <td className="num">{dep.risk_distribution.CRITICAL}</td>
+                          <td className="num cell-num" data-label="Students">{dep.students}</td>
+                          <td className="num cell-num" data-label="Average">{pct(dep.average_percentage)}</td>
+                          <td className="num cell-num" data-label="Shortage">{dep.shortage_count}</td>
+                          <td className="num cell-num" data-label="Critical">{dep.risk_distribution.CRITICAL}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableWrap>
               </section>
             )}
             <section className="card" aria-labelledby="subj-heading">
@@ -208,7 +207,7 @@ export function DashboardPage() {
                 <h2 id="subj-heading">Subject patterns</h2>
                 <span className="hint">where shortages concentrate</span>
               </div>
-              <div className="table-wrap">
+              <TableWrap label="Subject patterns">
                 <table>
                   <thead>
                     <tr>
@@ -221,22 +220,22 @@ export function DashboardPage() {
                   <tbody>
                     {o.subjects.map((s) => (
                       <tr key={s.subject.id}>
-                        <td>
+                        <td className="cell-title">
                           <strong>{s.subject.name}</strong>
                           <div className="small muted mono">
                             {s.subject.code} · {s.subject.department}
                           </div>
                         </td>
-                        <td className="num">{pct(s.average_percentage)}</td>
-                        <td className="num">
+                        <td className="num cell-num" data-label="Average">{pct(s.average_percentage)}</td>
+                        <td className="num cell-num" data-label="Below target">
                           {s.below_target}/{s.students}
                         </td>
-                        <td className="num">{s.critical}</td>
+                        <td className="num cell-num" data-label="Critical">{s.critical}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableWrap>
             </section>
             {isMentor && <AlertsList limit={6} title="Mentor alerts" />}
           </div>
@@ -249,7 +248,7 @@ export function DashboardPage() {
                   Upload new file →
                 </Link>
               </div>
-              <div className="table-wrap">
+              <TableWrap label="Recent imports">
                 <table>
                   <thead>
                     <tr>
@@ -263,24 +262,24 @@ export function DashboardPage() {
                   <tbody>
                     {o.recent_imports.map((i) => (
                       <tr key={i.id}>
-                        <td className="mono small">{i.filename}</td>
-                        <td>
+                        <td className="mono small cell-title">{i.filename}</td>
+                        <td className="cell-badge">
                           <span className={`badge ${i.status === "COMPLETED" ? "risk-SAFE" : "risk-CRITICAL"}`}>
                             {i.status}
                           </span>
                         </td>
-                        <td className="num">
+                        <td className="num cell-num" data-label="Rows">
                           {i.status === "COMPLETED"
                             ? `${i.rows_inserted} new, ${i.rows_updated} updated`
                             : `${i.rows_rejected} rejected`}
                         </td>
-                        <td>{i.uploaded_by ?? "—"}</td>
-                        <td className="small">{fmtDateTime(i.created_at)}</td>
+                        <td className="cell-num" data-label="By">{i.uploaded_by ?? "—"}</td>
+                        <td className="small cell-num" data-label="When">{fmtDateTime(i.created_at)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableWrap>
             </section>
           )}
         </>
