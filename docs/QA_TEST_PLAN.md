@@ -4,13 +4,14 @@ Every planned check is automated. Counts are from the last local run (2026-10-06
 
 | Suite | Command | Result |
 |---|---|---|
-| Backend unit + integration (real PostgreSQL) | `cd backend && pytest` | **181 passed** |
+| Backend unit + integration (real PostgreSQL) | `cd backend && pytest` | **183 passed** |
 | Backend lint/format | `ruff check app tests && ruff format --check app tests` | clean |
 | Frontend typecheck + unit | `cd frontend && npx tsc -b && npx vitest run` | **11 passed** |
 | Frontend production build | `npx vite build` | OK (109 KB gzipped JS) |
-| E2E (production Docker image + PostgreSQL) | `cd e2e && npx playwright test` | **7 passed** (acceptance flow, HOD scope, phone layout, WCAG 2.1 AA, errors, app mode), on a fresh database and on re-runs |
+| E2E (CI, `APP_ENV=production`) | `cd e2e && npx playwright test` | **20 passed** (acceptance flow, HOD scope, phone layout, WCAG 2.1 AA, errors, app mode, 8 security checks, layouts at 320/390/768/1024/1440 px) |
+| E2E on the live deployment | `.github/workflows/live-verify.yml` against https://attendai-gjk1.onrender.com | run #1: **18 passed, 1 failed** (320 px dashboard overflow, fixed in PR #2 and awaiting re-verification), 1 skipped (app mode) |
 | UI/UX audit (all roles, 360/390/768/1024/1440 px) | Playwright + axe-core script | 0 overflow, 0 touch targets < 36 px on phones, 0 WCAG 2.1 AA violations, 0 JS errors |
-| Android app on emulator | `.github/workflows/android.yml` → `e2e/android/app-smoke.mjs` | see the Android workflow run and the `android-latest` release notes |
+| Android app on emulator | `.github/workflows/android.yml` → `e2e/android/app-smoke.mjs` | Android 15 emulator, APK 1.0.6: passed (no native action bar, preconfigured live server, 0 px overflow) |
 | Dependency audit | `pip-audit`, `npm audit` | 0 known vulnerabilities |
 
 ## A. Authentication (`backend/tests/test_auth.py`, frontend `app.test.tsx`)

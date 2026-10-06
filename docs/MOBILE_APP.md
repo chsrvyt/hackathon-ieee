@@ -10,11 +10,14 @@ launch, so one APK works with any deployment.
 1. Open the repository's **Releases** page and download `AttendAI-1.0.<build>.apk` from the
    release **"AttendAI Android app"** (tag `android-latest`).
 2. On an Android 7.0+ phone, open the file and allow installing apps from that source.
-3. On first launch, enter the AttendAI server address (the hosted website, for example
-   `https://attendai.onrender.com`) and tap **Connect**. The app checks `/health` before saving.
+3. The app opens on the sign-in screen, already connected to the live deployment
+   **https://attendai-gjk1.onrender.com** (shown as **Server: attendai-gjk1.onrender.com**).
 4. Sign in. Demo accounts use the password `Demo@2026`.
 
-The server can be changed later from the sign-in screen (**Server: … → Change**).
+To use another AttendAI server, tap **Change** next to the server and enter that website's address
+(not your email). The app only accepts `https://` addresses and checks `/health` before saving.
+Builds are signed with a per-build key until a release keystore is configured, so uninstall an
+older AttendAI build before installing a new one.
 
 ## What is different from the website
 
@@ -45,20 +48,23 @@ refuse the app.
 
 On every push touching the frontend (and on manual runs):
 
-1. Build the web bundle (`VITE_DEFAULT_SERVER_URL` from the workflow input or the
-   `ATTENDAI_SERVER_URL` repository variable pre-fills the server address) and `npx cap sync android`.
+1. Build the web bundle and `npx cap sync android`. `VITE_DEFAULT_SERVER_URL` sets the server the
+   app opens with: the workflow input, else the `ATTENDAI_SERVER_URL` repository variable, else the
+   live deployment `https://attendai-gjk1.onrender.com`.
 2. Gradle builds a **signed release APK** and a debug APK. Signing uses the repository secrets
    `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
    `ANDROID_KEY_PASSWORD` when present. Otherwise it uses a key generated for that build only, so
    users must uninstall before installing a newer build.
-3. **Emulator smoke test** (Android 14): installs the debug APK, starts a real API with demo data,
-   runs `e2e/android/app-smoke.mjs` through Playwright's Android driver (server picker, student
-   dashboard, Requests tab, hardware back, layout checks, sign-out, admin dashboard and students)
-   and uploads device screenshots as the `android-screenshots` artifact.
+3. **Emulator smoke test** (Android 15, where edge-to-edge is enforced): installs the debug APK,
+   starts a real API with demo data, runs `e2e/android/app-smoke.mjs` through Playwright's Android
+   driver (no native action bar above the app, server change, student dashboard, Requests tab,
+   hardware back, layout checks, sign-out, admin dashboard and students) and uploads device
+   screenshots as the `android-screenshots` artifact.
 4. Publishes the release APK as the GitHub Release `android-latest`. The release notes state whether
    the emulator test passed.
 
-Manual run with a pre-filled server: **Actions → Android app → Run workflow**, then enter the server URL.
+Manual run for another server: **Actions → Android app → Run workflow**, then enter the server URL.
+The **Live verification** workflow runs the same device test against the live HTTPS deployment.
 
 ### Stable signing (recommended before sharing widely)
 

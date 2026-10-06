@@ -1,153 +1,133 @@
 # AttendAI — Final Status
 
 **Project:** AttendAI — Attendance Shortage Early Warning & Condonation System
-**Date:** 2026-10-06 (second iteration: navigation, UI/UX, Android app) · **Branch:** `claude/lucid-mccarthy-05cpem`
+**Date:** 2026-10-06 (live deployment verification) · **Branch:** `claude/lucid-mccarthy-05cpem`
 
 ## Deployment
 
 | Item | Value |
 |---|---|
-| Frontend URL | **Not deployed yet**: no public URL exists. Served by the backend (same origin) once deployed |
-| Backend URL | **Not deployed yet** |
-| Health URL | `https://<service>.onrender.com/health` after deployment |
-| Database | PostgreSQL 16 (Render managed PostgreSQL in `render.yaml`; local/CI: PostgreSQL 16) |
-| Deployment config | `render.yaml` (Blueprint), `Dockerfile`, `docker-compose.yml`, `backend/start.sh` |
-| One-click deploy | [Deploy to Render](https://render.com/deploy?repo=https://github.com/chsrvyt/hackathon-ieee/tree/claude/lucid-mccarthy-05cpem) |
-| **Android app (APK)** | **Published:** https://github.com/chsrvyt/hackathon-ieee/releases/tag/android-latest (`AttendAI-1.0.2.apk`, 3.8 MB, sha256 `334a2eb9…a70c8`) |
+| Status | **LIVE** on Render |
+| Website (frontend) | https://attendai-gjk1.onrender.com |
+| Backend API | https://attendai-gjk1.onrender.com/api (same origin as the website) |
+| Health | https://attendai-gjk1.onrender.com/health → `{"status":"ok"}` (verified 2026-10-06) |
+| Database | Render managed PostgreSQL 16 (`attendai-db`, private network only) |
+| Provider / config | Render Blueprint [`render.yaml`](../render.yaml), deploys the `main` branch |
+| Deployment date | 2026-10-06 |
+| Android app | APK 1.0.6, opens connected to the live URL: https://github.com/chsrvyt/hackathon-ieee/releases/tag/android-latest |
 
-### Why there is no live URL (external blocker)
+## Live verification (run on the public URL against the production database)
 
-This build environment has **no hosting-provider credentials**, and its egress policy denies the
-hosting APIs (the proxy answers `403` to `CONNECT api.render.com:443`; Fly.io, Railway, Vercel and
-Neon APIs are unreachable too). The GCP/AWS variables present are placeholders, not usable
-credentials. Nothing else blocks
-deployment: the exact production image was built and verified end-to-end here against
-PostgreSQL.
+Run: [Live verification #1](https://github.com/chsrvyt/hackathon-ieee/actions/runs/37451206519),
+2026-10-06 10:55 UTC, Playwright from GitHub's runners with `E2E_PRODUCTION=1`.
+Result: **18 passed, 1 failed, 1 skipped** (app-mode browser test, which needs a second origin;
+the Android emulator test covers it).
 
-**Single action needed (repository owner, about 5 minutes):**
-open [Deploy to Render](https://render.com/deploy?repo=https://github.com/chsrvyt/hackathon-ieee/tree/claude/lucid-mccarthy-05cpem) while signed in to Render (or Render → **New → Blueprint** →
-`chsrvyt/hackathon-ieee`, branch `claude/lucid-mccarthy-05cpem` → **Apply**). Then run the smoke test
-in [DEPLOYMENT_RUNBOOK.md](DEPLOYMENT_RUNBOOK.md#smoke-test-after-every-deploy):
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 1 | `/health` | PASS | `{"status":"ok"}` on the first request |
+| 2 | Frontend loads | PASS | SPA served, sign-in page renders |
+| 3 | Admin login | PASS | `admin@attendai.demo` |
+| 4 | Attendance CSV upload | PASS | invalid file rejected with row errors and nothing saved; `attendance_sample.csv` imported |
+| 5 | Analytics | PASS | dashboard totals and risk distribution |
+| 6 | Critical student | PASS | Rohan Verma listed under CRITICAL |
+| 7 | Risk explanation | PASS | 74.5% (108/145), projected 72.8% vs target 75%, reason shown |
+| 8 | Recovery calculator | PASS | 3 consecutive classes, "Recoverable" |
+| 9 | Mentor login | PASS | `mentor@attendai.demo`, at-risk students and pending requests |
+| 10 | Student login | PASS | `student@attendai.demo`, own dashboard only |
+| 11 | Condonation submission | PASS | student submits a request |
+| 12 | Condonation approval | PASS | mentor approves; a student's self-approval attempt gets 403 |
+| 13 | Student status update | PASS | student sees APPROVED and an alert |
+| 14 | Department report | PASS | Exam Cell CSE report |
+| 15 | CSV export | PASS | `attendai_cse_shortage_report.csv` downloaded |
+| 16 | Cross-student authorization | PASS | 403 for another student's profile, analytics, attendance and condonation; 403 for staff endpoints; mentor/HOD blocked from other departments |
+| 17 | Mobile layout | **FAIL at 320 px**, PASS at 390/768/1024/1440 px | 320 px admin dashboard scrolled sideways by 17 px (histogram labels). Phone bottom navigation and touch targets PASS |
+| 18 | Production CORS / errors | PASS | foreign origin gets no CORS header, app origin allowed; generic 401/403/422 without internals; CSRF enforced; Secure+HttpOnly cookie, HSTS, CSP, no `/api/docs` |
+| – | WCAG 2.1 AA (axe) | PASS | key pages |
+| – | Frontend bundle secrets scan | PASS | no keys, connection strings or private keys |
 
-```bash
-cd e2e && npm ci && npx playwright install chromium
-E2E_BASE_URL=https://<service>.onrender.com npx playwright test
-```
+### The 320 px failure
 
-Alternatively, add a Render API key to this environment's settings and allow `api.render.com`
-in its network policy, and the deployment and live verification can be completed from here.
+The version Render was serving did not yet contain the fix (histogram columns `minmax(0, 1fr)`
+with wrapping labels). That fix passed at 320 px locally, on the Render-style container and in
+CI. [PR #2](https://github.com/chsrvyt/hackathon-ieee/pull/2) merged it into `main` on
+2026-10-06, which triggers a Render redeploy. **Re-verification on the public URL is pending**:
+the **Live verification** workflow run for that push waits until Render serves the new commit
+(`GET /api/version`) and then repeats the whole suite.
 
-## Build
+## Android app
 
-| Item | Result |
+| Check | Result |
 |---|---|
-| Frontend | `tsc -b` clean · `vite build` OK (388 KB JS / 116 KB gzipped, 19 KB CSS) |
-| Android | Gradle (AGP 8.13, compileSdk/targetSdk 36, minSdk 24) · release APK 3.8 MB, verified with `apksigner` |
-| Backend | ruff check + format clean · Alembic migration applies, rolls back, re-applies, no drift |
-| Docker image | builds (114 MB compressed), runs as non-root, migrates and seeds on start, healthcheck |
+| Build | APK 1.0.6, signed, 3.8 MB ([Android run #6](https://github.com/chsrvyt/hackathon-ieee/actions/runs/37451206363)) |
+| Emulator (Android 15) | PASS: no native action bar, opens with `Server: attendai-gjk1.onrender.com`, student and admin flows, back button, 0 px overflow |
+| Against the live HTTPS server | Not run yet (the live workflow's Android job runs after the web job passes) |
+| HTTPS only | The app refuses non-HTTPS servers except device loopback |
+
+Fixed in 1.0.6: the action bar with a squashed splash image at the top of the first screen,
+the "Sign in" heading on the server step (an email was typed as the server address), and the
+stretched login layout on phones.
 
 ## Tests
 
 | Suite | Result |
 |---|---|
-| Unit (analytics engine) | 91 passed |
-| API / integration (PostgreSQL) | 181 passed in total (auth incl. bearer tokens and CORS allow-list, authorization, upload, analytics, condonation, reports) |
-| Security | IDOR tests per role, CSRF, throttling, session revocation, OpenAPI route sweep (all routes 401 anonymous; no cross-student access), pip-audit + npm audit: 0 vulnerabilities |
-| Frontend | 11 passed (API client, auth routing incl. sign-in regression, explainable view, condonation form) |
-| E2E | 7 passed against the **production Docker image + PostgreSQL** (`APP_ENV=production`, Secure cookies), on a fresh database and on a re-run: demo flow, HOD scope, phone bottom navigation, WCAG 2.1 AA scan, error handling, Android app mode |
-| On-device | `e2e/android/app-smoke.mjs` on an Android 14 emulator: first launch, server picker, student and admin flows, tabs, hardware back, sign-out |
-| CI (GitHub Actions) | Run #9 on `45d3140`: backend ✅ frontend ✅ E2E (incl. app mode) ✅ Docker build ✅ |
-| UI/UX audit | all pages × roles × 5 widths: 0 overflow, 0 touch targets < 36 px on phones, 0 WCAG 2.1 AA violations, 0 JS errors |
-| Android | Android workflow run #2: signed APK built ✅, on-device smoke test on Android 14 emulator ✅ (320 px screen: no overflow, bottom bar at the edge), release published ✅ |
+| Backend (unit + API on PostgreSQL) | **183 passed** |
+| Frontend | **11 passed** |
+| E2E in CI | **20 passed** ([CI run #15](https://github.com/chsrvyt/hackathon-ieee/actions/runs/37451206386), `APP_ENV=production`): demo flow, HOD scope, phone navigation, WCAG, errors, app mode, 8 security checks, 5 layout widths |
+| Render-style container (local) | 19 passed on a fresh database and on a re-run |
+| Docker image | builds in CI |
 
-## Acceptance (verified on the production container, not yet on a public URL)
+## Production configuration
 
-| # | Flow | Status |
-|---|---|---|
-| 1 | Open app | PASS |
-| 2 | Admin login | PASS |
-| 3 | Attendance upload (invalid file → row-level errors, nothing saved; valid CSV → 24 rows) | PASS |
-| 4 | Processing (import history, risk changes reported) | PASS |
-| 5–6 | Analytics, find critical student | PASS |
-| 7–12 | Student detail: 74.5% (108/145), projected 72.8%, CRITICAL, explanation, recovery 3 classes | PASS |
-| 13 | Logout | PASS |
-| 14–16 | Mentor: at-risk students, pending condonation | PASS |
-| 17–19 | Student: own dashboard, submit condonation (server rejects cross-student reads and forged approvals) | PASS |
-| 20–22 | Mentor approves → student sees APPROVED + alert | PASS |
-| 23 | Department report: totals, shortage list, CSV export | PASS |
-| – | HOD department isolation, mobile 390 px layout, unauthenticated API | PASS |
+| Check | Result |
+|---|---|
+| `DATABASE_URL` | from the Render database; no public access |
+| `SECRET_KEY` | generated by Render; production refuses a missing or short key |
+| CORS | same-origin website; only `https://localhost` and `capacitor://localhost` (app) allowed cross-origin; verified live |
+| Debug | off: no `/api/docs`, generic 500s, no reload (verified live) |
+| Migrations / seed | `alembic upgrade head` on start; idempotent demo seed |
+| Secrets in git | none (`.env` ignored; only the public demo password and CI's dummy key appear) |
 
 ## Acceptance gates
 
 | Gate | Status |
 |---|---|
-| 1 Repository builds | PASS |
-| 2 Tests pass | PASS (local + CI) |
-| 3 Database works | PASS |
-| 4 Authentication | PASS |
-| 5 Authorization | PASS |
-| 6 Attendance upload | PASS |
-| 7 Attendance calculations | PASS |
-| 8 Projection | PASS |
-| 9 Risk explanation | PASS |
-| 10 Recovery calculator | PASS |
-| 11 Student dashboard | PASS |
-| 12 Mentor dashboard | PASS |
-| 13 Admin dashboard | PASS |
-| 14 Condonation | PASS |
-| 15 Reports | PASS |
-| 16 Production build | PASS |
-| 17 Deployment | **BLOCKED**: needs the owner's hosting account (config ready) |
-| 18 LIVE frontend | **NOT VERIFIED**: no public URL yet |
-| 19 LIVE backend | **NOT VERIFIED**: no public URL yet |
-| 20 LIVE end-to-end demo | **NOT VERIFIED**: E2E suite ready to run against the URL |
-
-## Implemented
-
-- Navigation: desktop top navigation bar; phone/app bottom tab bar; account menu
-- Android app (Capacitor 8): configurable server, bearer-token auth, share-sheet downloads, back button, edge-to-edge
-
-- Session auth (scrypt, httpOnly cookie, revocable sessions, login throttling) with four roles and HOD department scope
-- CSV/XLSX import with full validation, atomic persistence, strict/replace modes, dry run, opt-in registration
-- Deterministic explainable analytics: current %, trend, projection, SAFE/WARNING/CRITICAL, reason, next action, subject-level risk
-- Recovery plan + what-if calculator; buffer classes; "not recoverable this term" handling
-- Alerts on risk changes and condonation decisions
-- Condonation workflow with history, permissions and notifications
-- Dashboards for student, mentor, admin/HOD and exam cell; student list with filters and pagination; drill-down
-- Department reports with shortage list and CSV export
-- Demo seed through the real import pipeline; sample and invalid example files
-
-## Security
-
-Server-side authorization on every endpoint, CSRF header guard, strict CSP and security headers,
-upload hardening (type/magic/size/zip-bomb/defusedxml), ORM-only queries with escaped LIKE,
-CSV formula-injection protection, generic production errors, no secrets in the repository,
-production SECRET_KEY enforcement. Details: [SECURITY_MODEL.md](SECURITY_MODEL.md).
+| 1–16 Build, tests, database, auth, authorization, upload, calculations, projection, explanation, recovery, dashboards, condonation, reports, production build | PASS |
+| 17 Deployment | PASS: live on Render |
+| 18 LIVE frontend | PASS |
+| 19 LIVE backend | PASS |
+| 20 LIVE end-to-end demo | PASS for every functional flow; mobile 320 px FAIL until the merged fix is re-verified live |
 
 ## Demo credentials
 
-Password `Demo@2026` for `admin@attendai.demo`, `hod.ece@attendai.demo`, `mentor@attendai.demo`,
-`mentor.ece@attendai.demo`, `examcell@attendai.demo`, `student@attendai.demo` (fictional data;
-public by design, only seeded when `SEED_DEMO_DATA=true`).
+Password `Demo@2026` for every account (fictional data, public by design, seeded only when
+`SEED_DEMO_DATA=true`):
+
+| Email | Role |
+|---|---|
+| `admin@attendai.demo` | Admin, all departments |
+| `hod.ece@attendai.demo` | HOD, ECE only |
+| `mentor@attendai.demo` | Mentor, CSE students |
+| `mentor.ece@attendai.demo` | Mentor, ECE students |
+| `examcell@attendai.demo` | Exam Cell (read-only reports) |
+| `student@attendai.demo` | Student Rohan Verma (S003) |
 
 ## Known limitations
 
 - Projections assume the recent rate continues; no timetable/holiday modelling, no claimed accuracy.
 - Not an examination-eligibility ruling (institutional rules are not encoded).
-- Planned classes per subject come from configuration/seed; there is no admin UI to edit subjects or the roster
-  (new students/subjects can be registered through an import).
-- The login throttle is per process. There is no password-reset flow.
-- Render free tier: service sleeps after 15 minutes idle (cold start about 30–60 s), free DB expires after 30 days.
-
-## External blockers
-
-- Hosting credentials or account access for the deployment (single action above).
+- No admin UI for subjects/roster (imports can register new ones); no password reset; login throttle is per process.
+- Render free tier: the service sleeps after 15 idle minutes (first request about 30–60 s); free PostgreSQL expires after 30 days.
+- APKs use a per-build signing key until `ANDROID_KEYSTORE_*` secrets are set, so updates need an uninstall first.
+- The live demo flow changes demo data the way a judge would (re-imports the sample, approves Rohan's request).
 
 ## Final verdict
 
 ```text
-READY FOR DEMO on the verified production container (docker compose up, or any Docker host)
-ANDROID APP: built, emulator-verified and published (GitHub Release android-latest)
-NOT YET LIVE: the public website needs the owner's one-click Render deploy; then point the
-app at that URL (or set ATTENDAI_SERVER_URL and re-run the Android workflow to pre-fill it).
+LIVE: https://attendai-gjk1.onrender.com (Render + PostgreSQL)
+All functional flows PASS on the public URL (login, upload, analytics, risk, recovery,
+condonation, reports, authorization, CORS/errors).
+One check failed on the public URL: 320 px dashboard overflow. The fix is merged (PR #2) and the
+Live verification workflow re-tests once Render serves it. Not yet re-verified live.
 ```

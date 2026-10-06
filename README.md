@@ -10,6 +10,22 @@ exemption) workflow between students, mentors, HODs and the Exam Cell.
 
 The analytics are **deterministic and explainable**. No machine learning is used or claimed.
 
+## Live demo
+
+| | |
+|---|---|
+| Website | **https://attendai-gjk1.onrender.com** (Render + PostgreSQL; the free instance can take 30–60 s to wake up) |
+| Health | https://attendai-gjk1.onrender.com/health → `{"status":"ok"}` |
+| Android app | [AttendAI APK](https://github.com/chsrvyt/hackathon-ieee/releases/tag/android-latest), opens connected to the website |
+| Sign in | `admin@attendai.demo`, `mentor@attendai.demo`, `student@attendai.demo`, `examcell@attendai.demo`, `hod.ece@attendai.demo`; password **`Demo@2026`** |
+
+Live verification on 2026-10-06 (public URL, production database): health, login, CSV upload,
+analytics, critical student, risk explanation, recovery, mentor and student flows, condonation
+submit/approve/status, department report, CSV export, cross-student authorization, CORS and error
+handling all **PASS**; layouts at 390/768/1024/1440 px **PASS**. The 320 px dashboard had a
+17 px horizontal scroll; the fix is merged and awaits the next live run. Details:
+[docs/FINAL_STATUS.md](docs/FINAL_STATUS.md).
+
 ## What it does
 
 | Role | Capabilities |
@@ -43,8 +59,9 @@ Browser ──► FastAPI (serves the React SPA + /api) ──► PostgreSQL
 * **Desktop**: sticky top navigation bar (sections with icons and counts, account menu, sign out).
 * **Phones**: compact app bar plus a bottom tab bar (Home/Dashboard, Students, Upload, Requests,
   Reports, Alerts by role). Tables become cards, touch targets are 44 px, and safe areas are respected.
-* **Android app**: download the APK from the repository's **Releases** page (`android-latest`). On
-  first launch enter the website address, then sign in. Details: [docs/MOBILE_APP.md](docs/MOBILE_APP.md).
+* **Android app**: download the APK from the repository's **Releases** page (`android-latest`). It
+  opens connected to https://attendai-gjk1.onrender.com; sign in with a demo account. Details:
+  [docs/MOBILE_APP.md](docs/MOBILE_APP.md).
 
 ## Quick start (Docker, recommended)
 
@@ -99,18 +116,22 @@ npm run dev                   # http://localhost:5173 (proxies /api to :8000)
 ## Tests
 
 ```bash
-cd backend  && pytest                       # 181 tests, needs PostgreSQL database "attendai_test"
+cd backend  && pytest                       # 183 tests, needs PostgreSQL database "attendai_test"
 cd frontend && npx tsc -b && npx vitest run # 11 tests
-cd e2e      && npm ci && E2E_BASE_URL=http://localhost:8000 npx playwright test   # acceptance, phone layout, WCAG 2.1 AA
+cd e2e      && npm ci && E2E_BASE_URL=http://localhost:8000 npx playwright test   # acceptance, security, layouts, WCAG 2.1 AA
 # app-mode test: also serve frontend/dist on another origin and set E2E_NATIVE_URL (see docs/MOBILE_APP.md)
 ```
 
 CI (`.github/workflows/ci.yml`) runs backend lint and tests on PostgreSQL, frontend
 typecheck, tests and build, the Playwright suite (including app mode and accessibility) and a
 Docker build. `.github/workflows/android.yml` builds the APK, tests it on an Android emulator and
-publishes it.
+publishes it. `.github/workflows/live-verify.yml` runs on every push to `main`: it waits until
+Render serves the pushed commit, then runs the browser suite and the Android emulator test against
+the live URL.
 
 ## Deployment
+
+Live at **https://attendai-gjk1.onrender.com** (Render Blueprint, deploys `main`).
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/chsrvyt/hackathon-ieee/tree/claude/lucid-mccarthy-05cpem)
 
