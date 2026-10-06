@@ -44,9 +44,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
-      - name: Android SDK packages
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Android SDK packages (runner's preinstalled SDK)
+        run: |
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          echo "using $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
       - run: npm ci
       - name: Build web bundle
         env:
