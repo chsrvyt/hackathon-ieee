@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Alert, AttendanceRecord, Projection, Student, Subject, utcnow
-from .engine import SEVERITY, Analysis, Period, Policy, aggregate_by_date, analyze, analyze_overall, as_percentage
+from .engine import SEVERITY, Analysis, Period, Policy, aggregate_by_date, analyze, analyze_overall, as_percentage, fmt
 
 
 def current_policy() -> Policy:
@@ -86,7 +86,7 @@ class StudentAnalysis:
             return text
         return (
             f"Overall attendance is {self.overall.risk_level.lower()} "
-            f"({as_percentage(self.overall.projected)}% projected), but {label} is "
+            f"({fmt(self.overall.projected)} projected), but {label} is "
             f"{driver.risk_level}: {driver.reason}"
         )
 
@@ -241,8 +241,8 @@ def refresh_projections(db: Session, student_ids: Iterable[int], create_alerts: 
 
 def _risk_alerts(db: Session, sa: StudentAnalysis, previous: str | None, level: str) -> None:
     student = sa.student
-    proj = as_percentage(sa.overall.projected)
-    target = as_percentage(sa.overall.policy.target)
+    proj = fmt(sa.overall.projected)
+    target = fmt(sa.overall.policy.target)
     if level in ("WARNING", "CRITICAL"):
         if student.user_id:
             db.add(
@@ -264,7 +264,7 @@ def _risk_alerts(db: Session, sa: StudentAnalysis, previous: str | None, level: 
                     message=(
                         f"{student.name} ({student.roll_number}) is now {level}"
                         f"{f' (was {previous})' if previous and previous != 'NO_DATA' else ''}: "
-                        f"overall {as_percentage(sa.overall.current)}% now, {proj}% projected vs {target}% target."
+                        f"overall {fmt(sa.overall.current)} now, {proj} projected vs {target} target."
                     ),
                 )
             )
@@ -275,6 +275,6 @@ def _risk_alerts(db: Session, sa: StudentAnalysis, previous: str | None, level: 
                 student_id=student.id,
                 kind="RISK",
                 severity="INFO",
-                message=f"Good news: your attendance risk improved from {previous} to SAFE ({proj}% projected).",
+                message=f"Good news: your attendance risk improved from {previous} to SAFE ({proj} projected).",
             )
         )
