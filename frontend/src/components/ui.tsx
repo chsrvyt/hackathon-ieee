@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
-import { errorMessage } from "../api/client";
+import { useState, type ReactNode } from "react";
+import { downloadFile, errorMessage } from "../api/client";
+import { IconDownload } from "./icons";
 import type { CondonationStatus, RiskLevel, Trend } from "../api/types";
 
 export const pct = (v: number | null | undefined, digits = 1) =>
@@ -190,5 +191,49 @@ export function TableWrap({ label, children }: { label: string; children: ReactN
     <div className="table-wrap table-cards" role="region" aria-label={label} tabIndex={0}>
       {children}
     </div>
+  );
+}
+
+/** Download an API-generated file: a plain download on the web, the share sheet in the Android app. */
+export function DownloadButton({
+  path,
+  filename,
+  label,
+  primary,
+}: {
+  path: string;
+  filename: string;
+  label: string;
+  primary?: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span className="download-button">
+      <button
+        type="button"
+        className={`btn${primary ? " btn-primary" : ""}`}
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await downloadFile(path, filename, label);
+          } catch (err) {
+            setError(errorMessage(err));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <IconDownload size={16} />
+        {busy ? "Preparing…" : label}
+      </button>
+      {error && (
+        <span className="small notice notice-error" role="alert">
+          {error}
+        </span>
+      )}
+    </span>
   );
 }

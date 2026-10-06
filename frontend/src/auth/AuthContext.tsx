@@ -3,6 +3,7 @@ import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, onUnauthorized } from "../api/client";
 import { keys } from "../api/hooks";
 import type { Role, User } from "../api/types";
+import { isNative, setToken } from "../native";
 
 interface AuthState {
   user: User | null;
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         return (await api<{ user: User | null }>("/auth/session", { silent401: true })).user;
       } catch (err) {
-        if (err instanceof ApiError && err.status === 401) return null;
+        if (err instanceof ApiError && (err.status === 401 || err.code === "NO_SERVER")) return null;
         throw err;
       }
     },
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () =>
       onUnauthorized(() => {
         // Session expired mid-use: drop all cached data and fall back to the login screen.
+        if (isNative()) setToken(null);
         resetCache(qc, null);
       }),
     [qc],
@@ -50,9 +52,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const { user } = await api<{ user: User }>("/auth/login", { json: { email, password }, silent401: true });
-      resetCache(qc, user);
-      return user;
+      const native = isNative();
+      const res = await api<{ user: User; token?: string }>("/auth/login", {
+        json: { email, password },
+        silent401: true,
+        headers: native ? { "X-AttendAI-Client": "mobile" } : undefined,
+      });
+      if (native && res.token) setToken(res.token);
+      resetCache(qc, res.user);
+      return res.user;
     },
     [qc],
   );
@@ -61,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api("/auth/logout", { method: "POST", silent401: true });
     } finally {
+      if (isNative()) setToken(null);
       resetCache(qc, null);
     }
   }, [qc]);

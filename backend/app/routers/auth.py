@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from .. import serializers
 from ..config import get_settings
-from ..deps import DB, CurrentUser, get_current_user
+from ..deps import DB, CurrentUser, get_current_user, session_token
 from ..errors import AppError
 from ..models import AuthSession, User
 from ..schemas import LoginRequest
@@ -82,6 +82,11 @@ def login(body: LoginRequest, request: Request, response: Response, db: DB) -> d
     ttl = timedelta(hours=settings.session_ttl_hours)
     db.add(AuthSession(user_id=user.id, token_hash=hash_session_token(token), created_at=now, expires_at=now + ttl))
     db.commit()
+    log.info("login ok user_id=%s role=%s", user.id, user.role)
+    if request.headers.get("x-attendai-client", "").lower() == "mobile":
+        # The native app cannot rely on cross-origin cookies; it keeps the token in app storage
+        # and sends it as "Authorization: Bearer". Browsers never receive the token in a body.
+        return {"user": serializers.user(user), "token": token, "expires_at": (now + ttl).isoformat()}
     response.set_cookie(
         settings.session_cookie_name,
         token,
@@ -91,14 +96,13 @@ def login(body: LoginRequest, request: Request, response: Response, db: DB) -> d
         samesite=settings.cookie_samesite,
         path="/",
     )
-    log.info("login ok user_id=%s role=%s", user.id, user.role)
     return {"user": serializers.user(user)}
 
 
 @router.post("/logout")
 def logout(request: Request, response: Response, db: DB) -> dict:
     settings = get_settings()
-    token = request.cookies.get(settings.session_cookie_name)
+    token = session_token(request)
     if token:
         session = db.scalar(select(AuthSession).where(AuthSession.token_hash == hash_session_token(token)))
         if session is not None and session.revoked_at is None:

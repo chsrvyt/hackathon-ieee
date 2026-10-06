@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE } from "../api/client";
 import { useDepartmentReport, useDepartments } from "../api/hooks";
 import {
+  DownloadButton,
   EmptyState,
   ErrorState,
   Histogram,
@@ -73,9 +73,12 @@ export function ReportsPage() {
               {r.department.name} ({r.department.code})
             </h2>
             <div className="row no-print">
-              <a className="btn btn-primary" href={`${API_BASE}/reports/department/${r.department.id}/export.csv`} download>
-                Export shortage list (CSV)
-              </a>
+              <DownloadButton
+                primary
+                path={`/reports/department/${r.department.id}/export.csv`}
+                filename={`attendai_${r.department.code.toLowerCase()}_shortage_report.csv`}
+                label="Export shortage list (CSV)"
+              />
               <button className="btn desktop-only" onClick={() => window.print()}>
                 Print
               </button>

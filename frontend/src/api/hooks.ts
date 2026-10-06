@@ -31,12 +31,13 @@ export const keys = {
   demo: ["demo-accounts"] as const,
 };
 
-export function useDemoAccounts() {
+export function useDemoAccounts(enabled = true) {
   return useQuery({
     queryKey: keys.demo,
     queryFn: () => api<DemoAccounts>("/auth/demo-accounts", { silent401: true }),
     staleTime: Infinity,
     retry: false,
+    enabled,
   });
 }
 

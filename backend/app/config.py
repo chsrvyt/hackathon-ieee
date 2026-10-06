@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     cookie_samesite: str = "lax"
     cors_origins: str = ""  # comma separated list of allowed origins
     frontend_origin: str = ""  # convenience alias, merged into cors_origins
+    # WebView origins of the AttendAI mobile app (Capacitor: Android https://localhost, iOS capacitor://localhost).
+    # The app authenticates with a bearer token, never cookies. Set to "" to disable the app.
+    mobile_app_origins: str = "https://localhost,capacitor://localhost"
     login_max_failures: int = 8
     login_window_minutes: int = 15
 
@@ -100,7 +103,7 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        raw = [*self.cors_origins.split(","), self.frontend_origin]
+        raw = [*self.cors_origins.split(","), self.frontend_origin, *self.mobile_app_origins.split(",")]
         origins = []
         for item in raw:
             item = item.strip().rstrip("/")

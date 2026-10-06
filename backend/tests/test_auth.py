@@ -110,3 +110,50 @@ def test_demo_accounts_listing(anon):
     assert body["enabled"] is True
     roles = {a["role"] for a in body["accounts"]}
     assert roles == {"ADMIN", "MENTOR", "STUDENT", "EXAM_CELL"}
+
+
+MOBILE = {"X-AttendAI-Client": "mobile", "X-Requested-With": "AttendAI"}
+
+
+def test_mobile_login_returns_bearer_token_and_no_cookie(anon):
+    r = anon.post("/api/auth/login", json={"email": "student@attendai.demo", "password": "Demo@2026"}, headers=MOBILE)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["token"] and body["user"]["role"] == "STUDENT" and body["expires_at"]
+    assert "set-cookie" not in r.headers
+    web = anon.post("/api/auth/login", json={"email": "student@attendai.demo", "password": "Demo@2026"})
+    assert "token" not in web.json()  # browsers never get the token in a body
+
+
+def test_bearer_token_authenticates_and_logout_revokes_it():
+    from .conftest import make_client
+
+    c = make_client()
+    token = c.post(
+        "/api/auth/login", json={"email": "student@attendai.demo", "password": "Demo@2026"}, headers=MOBILE
+    ).json()["token"]
+    app_client = make_client()  # no cookies at all
+    auth = {"Authorization": f"Bearer {token}"}
+    assert app_client.get("/api/auth/me", headers=auth).json()["user"]["email"] == "student@attendai.demo"
+    assert app_client.get("/api/students/1", headers=auth).status_code == 403  # same scopes as the web
+    assert app_client.post("/api/auth/logout", headers=auth).status_code == 200
+    assert app_client.get("/api/auth/me", headers=auth).status_code == 401
+    assert app_client.get("/api/auth/me", headers={"Authorization": "Bearer not-a-token"}).status_code == 401
+
+
+def test_cors_allows_only_configured_app_origins(anon):
+    def preflight(origin):
+        return anon.options(
+            "/api/auth/login",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization,content-type,x-requested-with,x-attendai-client",
+            },
+        )
+
+    ok = preflight("https://localhost")
+    assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == "https://localhost"
+    assert "authorization" in ok.headers["access-control-allow-headers"].lower()
+    evil = preflight("https://evil.example")
+    assert "access-control-allow-origin" not in evil.headers

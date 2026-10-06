@@ -17,9 +17,17 @@ from .security import hash_session_token
 DB = Annotated[Session, Depends(get_db)]
 
 
+def session_token(request: Request) -> str | None:
+    """Bearer token (mobile app) or session cookie (web)."""
+    auth = request.headers.get("authorization", "")
+    scheme, _, value = auth.partition(" ")
+    if scheme.lower() == "bearer" and value.strip():
+        return value.strip()
+    return request.cookies.get(get_settings().session_cookie_name)
+
+
 def get_current_user(request: Request, db: DB) -> User:
-    settings = get_settings()
-    token = request.cookies.get(settings.session_cookie_name)
+    token = session_token(request)
     if not token:
         raise AppError(401, "UNAUTHENTICATED", "Please sign in to continue.")
     session = db.scalar(select(AuthSession).where(AuthSession.token_hash == hash_session_token(token)))

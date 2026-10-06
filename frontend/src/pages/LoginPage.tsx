@@ -1,15 +1,21 @@
 import { useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { errorMessage } from "../api/client";
-import { useDemoAccounts } from "../api/hooks";
+import { keys, useDemoAccounts } from "../api/hooks";
 import { homePath, useAuth } from "../auth/AuthContext";
+import { ServerSettings } from "../components/ServerSettings";
 import { Loading } from "../components/ui";
+import { getServerUrl, isNative } from "../native";
 
 export function LoginPage() {
   const { user, loading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const demo = useDemoAccounts();
+  const qc = useQueryClient();
+  const native = isNative();
+  const [serverReady, setServerReady] = useState(!native || !!getServerUrl());
+  const demo = useDemoAccounts(serverReady);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +63,16 @@ export function LoginPage() {
             <h1>Sign in</h1>
             <p className="muted">Use your institutional account.</p>
           </div>
+          {native && (
+            <ServerSettings
+              onChange={() => {
+                setServerReady(true);
+                setError(null);
+                qc.invalidateQueries({ queryKey: keys.demo });
+              }}
+            />
+          )}
+          {serverReady && (
           <form className="card stack" onSubmit={signIn} aria-label="Sign in form">
             <div className="field">
               <label htmlFor="email">Email</label>
@@ -89,8 +105,9 @@ export function LoginPage() {
               {submitting ? "Signing in…" : "Sign in"}
             </button>
           </form>
+          )}
 
-          {demo.data?.enabled && (
+          {serverReady && demo.data?.enabled && (
             <section className="card stack" aria-labelledby="demo-heading" style={{ gap: 10 }}>
               <div>
                 <h2 id="demo-heading">Demo accounts</h2>

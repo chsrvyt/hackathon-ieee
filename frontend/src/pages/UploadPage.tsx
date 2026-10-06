@@ -1,10 +1,10 @@
 import { useRef, useState, type DragEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { API_BASE, ApiError, errorMessage } from "../api/client";
+import { ApiError, errorMessage } from "../api/client";
 import { useImports, useUpload } from "../api/hooks";
 import type { UploadResult } from "../api/types";
-import { IconDownload, IconUpload } from "../components/icons";
-import { RiskBadge, TableWrap, fmtDateTime } from "../components/ui";
+import { IconUpload } from "../components/icons";
+import { DownloadButton, RiskBadge, TableWrap, fmtDateTime } from "../components/ui";
 
 const MAX_MB = 5;
 const REQUIRED = ["student_roll", "subject_code", "date", "classes_conducted", "classes_attended"];
@@ -70,10 +70,11 @@ export function UploadPage() {
             The whole file is validated first. If any row is invalid, nothing is saved and every problem is listed.
           </p>
         </div>
-        <a className="btn" href={`${API_BASE}/attendance/template.csv`} download>
-          <IconDownload size={16} />
-          Download CSV template
-        </a>
+        <DownloadButton
+          path="/attendance/template.csv"
+          filename="attendai_attendance_template.csv"
+          label="Download CSV template"
+        />
       </div>
 
       <div className="grid grid-2">

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { ACCOUNTS, login, logout, trackConsole } from "./helpers";
 
@@ -144,11 +145,14 @@ test("full judge demo flow: upload -> analytics -> mentor -> condonation -> repo
     await expect(page.getByRole("heading", { name: "Computer Science & Engineering (CSE)" })).toBeVisible();
     await expect(page.locator(".stat").filter({ hasText: "Total students" })).toContainText("8");
     await expect(page.getByRole("row").filter({ hasText: "Rohan Verma" })).toBeVisible();
-    const href = await page.getByRole("link", { name: "Export shortage list (CSV)" }).getAttribute("href");
-    const csv = await page.request.get(href!);
-    expect(csv.status()).toBe(200);
-    expect(csv.headers()["content-type"]).toContain("text/csv");
-    expect(await csv.text()).toContain("S003");
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Export shortage list (CSV)" }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe("attendai_cse_shortage_report.csv");
+    const csv = await readFile((await download.path())!, "utf8");
+    expect(csv).toContain("roll_number");
+    expect(csv).toContain("S003");
     await logout(page);
   });
 
