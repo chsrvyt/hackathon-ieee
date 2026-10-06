@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, onUnauthorized } from "../api/client";
 import { keys } from "../api/hooks";
 import type { Role, User } from "../api/types";
@@ -12,6 +12,16 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | null>(null);
+
+/**
+ * Drop every cached query except the session itself. (QueryClient.clear() would also detach the
+ * session observer, leaving this provider unaware of the new user until a full reload.)
+ */
+function resetCache(qc: QueryClient, user: User | null) {
+  qc.cancelQueries({ predicate: (q) => q.queryKey[0] !== keys.me[0] });
+  qc.removeQueries({ predicate: (q) => q.queryKey[0] !== keys.me[0] });
+  qc.setQueryData(keys.me, user);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
@@ -33,8 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () =>
       onUnauthorized(() => {
         // Session expired mid-use: drop all cached data and fall back to the login screen.
-        qc.clear();
-        qc.setQueryData(keys.me, null);
+        resetCache(qc, null);
       }),
     [qc],
   );
@@ -42,8 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const { user } = await api<{ user: User }>("/auth/login", { json: { email, password }, silent401: true });
-      qc.clear();
-      qc.setQueryData(keys.me, user);
+      resetCache(qc, user);
       return user;
     },
     [qc],
@@ -53,8 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api("/auth/logout", { method: "POST", silent401: true });
     } finally {
-      qc.clear();
-      qc.setQueryData(keys.me, null);
+      resetCache(qc, null);
     }
   }, [qc]);
 

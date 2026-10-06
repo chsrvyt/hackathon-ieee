@@ -94,6 +94,25 @@ describe("routing and auth", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Incorrect email or password.");
   });
 
+  it("signs in and lands on the role's home page", async () => {
+    const admin = { id: 1, name: "Dr. Neha Kapoor", email: "admin@attendai.demo", role: "ADMIN", department: null, student_id: null };
+    handler = (url) => {
+      if (url.endsWith("/auth/session")) return { body: { user: null } };
+      if (url.endsWith("/auth/demo-accounts")) return { body: { enabled: false, accounts: [] } };
+      if (url.endsWith("/auth/login")) return { body: { user: admin } };
+      if (url.endsWith("/alerts")) return { body: { items: [], unread_count: 0 } };
+      if (url.endsWith("/analytics/overview")) return { status: 500, body: { error: { code: "X", message: "stub" } } };
+      return { status: 404, body: { error: { code: "NOT_FOUND", message: "nope" } } };
+    };
+    wrap(<App />, "/login");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Email"), "admin@attendai.demo");
+    await user.type(screen.getByLabelText("Password"), "Demo@2026");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("Dr. Neha Kapoor")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Sign in" })).not.toBeInTheDocument();
+  });
+
   it("keeps students out of staff pages", async () => {
     handler = (url) => {
       if (url.endsWith("/auth/session"))
