@@ -1,0 +1,9 @@
+student_roll,student_name,department,semester,subject_code,subject_name,date,classes_conducted,classes_attended
+S001,Aarav Sharma,CSE,2,CS101,Data Structures,2026-09-08,10,12
+S002,Diya Patil,CSE,2,CS101,Data Structures,2026-09-08,10,-1
+S003,Rohan Verma,CSE,2,CS101,Data Structures,2026-13-40,10,8
+S999,Unknown Student,CSE,2,CS101,Data Structures,2026-09-08,10,8
+S004,Meera Joshi,CSE,2,CS999,Unknown Subject,2026-09-08,10,8
+S005,Kabir Singh,CSE,2,CS101,Data Structures,2026-09-08,ten,8
+S006,Ananya Kulkarni,CSE,2,CS101,Data Structures,2026-09-08,10,9
+S006,Ananya Kulkarni,CSE,2,CS101,Data Structures,2026-09-08,10,9
