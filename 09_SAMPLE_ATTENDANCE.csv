@@ -1,0 +1,25 @@
+student_roll,student_name,department,semester,subject_code,subject_name,date,classes_conducted,classes_attended
+S001,Aarav Sharma,CSE,2,CS101,Data Structures,2026-09-01,20,16
+S001,Aarav Sharma,CSE,2,CS102,DBMS,2026-09-01,18,15
+S001,Aarav Sharma,CSE,2,CS103,Operating Systems,2026-09-01,20,14
+S002,Diya Patil,CSE,2,CS101,Data Structures,2026-09-01,20,19
+S002,Diya Patil,CSE,2,CS102,DBMS,2026-09-01,18,17
+S002,Diya Patil,CSE,2,CS103,Operating Systems,2026-09-01,20,19
+S003,Rohan Verma,CSE,2,CS101,Data Structures,2026-09-01,20,14
+S003,Rohan Verma,CSE,2,CS102,DBMS,2026-09-01,18,12
+S003,Rohan Verma,CSE,2,CS103,Operating Systems,2026-09-01,20,13
+S004,Meera Joshi,CSE,2,CS101,Data Structures,2026-09-01,20,17
+S004,Meera Joshi,CSE,2,CS102,DBMS,2026-09-01,18,14
+S004,Meera Joshi,CSE,2,CS103,Operating Systems,2026-09-01,20,16
+S005,Kabir Singh,CSE,2,CS101,Data Structures,2026-09-01,20,10
+S005,Kabir Singh,CSE,2,CS102,DBMS,2026-09-01,18,11
+S005,Kabir Singh,CSE,2,CS103,Operating Systems,2026-09-01,20,9
+S006,Ananya Kulkarni,CSE,2,CS101,Data Structures,2026-09-01,20,18
+S006,Ananya Kulkarni,CSE,2,CS102,DBMS,2026-09-01,18,16
+S006,Ananya Kulkarni,CSE,2,CS103,Operating Systems,2026-09-01,20,17
+S007,Vihaan Shah,CSE,2,CS101,Data Structures,2026-09-01,20,15
+S007,Vihaan Shah,CSE,2,CS102,DBMS,2026-09-01,18,13
+S007,Vihaan Shah,CSE,2,CS103,Operating Systems,2026-09-01,20,14
+S008,Isha Deshmukh,CSE,2,CS101,Data Structures,2026-09-01,20,20
+S008,Isha Deshmukh,CSE,2,CS102,DBMS,2026-09-01,18,18
+S008,Isha Deshmukh,CSE,2,CS103,Operating Systems,2026-09-01,20,20
