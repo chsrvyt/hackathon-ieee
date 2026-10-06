@@ -72,7 +72,7 @@ def fmt(ratio: Fraction | None) -> str:
     value = as_percentage(ratio)
     if value is None:
         return "n/a"
-    text = f"{value:.1f}"
+    text = f"{value:.1f}".removesuffix(".0")
     return f"{text}%"
 
 

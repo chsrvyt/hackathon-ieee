@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from .. import serializers
 from ..config import get_settings
-from ..deps import DB, CurrentUser
+from ..deps import DB, CurrentUser, get_current_user
 from ..errors import AppError
 from ..models import AuthSession, User
 from ..schemas import LoginRequest
@@ -111,6 +111,17 @@ def logout(request: Request, response: Response, db: DB) -> dict:
 @router.get("/me")
 def me(user: CurrentUser) -> dict:
     return {"user": serializers.user(user)}
+
+
+@router.get("/session")
+def session(request: Request, db: DB) -> dict:
+    """Like /me, but answers 200 with user=null for anonymous visitors (no console-noise 401 on page load)."""
+    try:
+        return {"user": serializers.user(get_current_user(request, db))}
+    except AppError as exc:
+        if exc.status_code == 401:
+            return {"user": None}
+        raise
 
 
 @router.get("/demo-accounts")

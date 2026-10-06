@@ -100,6 +100,11 @@ def test_login_validation_error_contract(anon):
     assert r.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_session_probe_is_anonymous_friendly(anon, student):
+    assert anon.get("/api/auth/session").json() == {"user": None}
+    assert student.get("/api/auth/session").json()["user"]["role"] == "STUDENT"
+
+
 def test_demo_accounts_listing(anon):
     body = anon.get("/api/auth/demo-accounts").json()
     assert body["enabled"] is True

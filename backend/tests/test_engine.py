@@ -179,7 +179,7 @@ def test_analyze_critical_case_is_explained():
     assert out["trend"] == "DECREASING"
     assert out["risk_level"] == "CRITICAL"
     assert out["projected_percentage"] < 75
-    assert "below the 75.0% target" in out["reason"]
+    assert "below the 75% target" in out["reason"]
     assert out["recovery"]["classes_required"] == 12
     assert "next 12 classes" in out["recommended_action"]
     for key in (
