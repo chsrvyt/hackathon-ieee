@@ -1,8 +1,12 @@
 name: Live verification
 
-# Verifies a deployed AttendAI instance end to end from GitHub's runners:
-# Actions -> Live verification -> Run workflow -> paste the public URL (e.g. https://attendai.onrender.com).
+# Verifies the deployed AttendAI instance end to end from GitHub's runners.
+# On push: waits until Render serves the pushed commit (GET /api/version), then tests it.
+# Manually: Actions -> Live verification -> Run workflow -> public URL.
 on:
+  push:
+    branches: [main, claude/lucid-mccarthy-05cpem]
+    paths-ignore: ["docs/**", "**/*.md"]
   workflow_dispatch:
     inputs:
       url:
@@ -19,14 +23,17 @@ permissions:
 
 concurrency:
   group: live-verify
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+env:
+  LIVE_URL: ${{ inputs.url || vars.ATTENDAI_SERVER_URL || 'https://attendai-gjk1.onrender.com' }}
 
 jobs:
   web:
     name: Website (acceptance, security, responsive, accessibility)
     runs-on: ubuntu-latest
     env:
-      E2E_BASE_URL: ${{ inputs.url }}
+      E2E_BASE_URL: ${{ inputs.url || vars.ATTENDAI_SERVER_URL || 'https://attendai-gjk1.onrender.com' }}
       E2E_PRODUCTION: "1"
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +49,21 @@ jobs:
             sleep 10
           done
           echo "::error::$E2E_BASE_URL/health did not return {\"status\":\"ok\"}"; exit 1
+      - name: Wait for the pushed commit to be serving
+        if: github.event_name == 'push'
+        run: |
+          live=""
+          for i in $(seq 1 45); do
+            live=$(curl -s --max-time 20 "$E2E_BASE_URL/api/version" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit") or "")' 2>/dev/null || true)
+            echo "attempt $i: serving ${live:-unknown}, want $GITHUB_SHA"
+            if [ -n "$live" ] && [ "${GITHUB_SHA#"$live"}" != "$GITHUB_SHA" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "::warning::$GITHUB_SHA is not serving after 15 minutes (serving: ${live:-unknown}); testing the version that is live"
+      - name: Deployed version
+        run: |
+          echo "url=$E2E_BASE_URL"; curl -s "$E2E_BASE_URL/health"; echo; curl -s "$E2E_BASE_URL/api/version"; echo
+          curl -s "$E2E_BASE_URL/" | grep -o '/assets/[^"]*' | sort -u
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -63,7 +85,7 @@ jobs:
 
   android:
     name: Android app against the live server
-    if: ${{ inputs.android }}
+    if: ${{ github.event_name == 'push' || inputs.android }}
     needs: web
     runs-on: ubuntu-latest
     steps:
@@ -100,7 +122,7 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
             adb install -r "${{ env.APK }}"
-            cd e2e && APP_SERVER_URL="${{ inputs.url }}" SCREENSHOT_DIR="$GITHUB_WORKSPACE/live-android-screenshots" node android/app-smoke.mjs
+            cd e2e && APP_SERVER_URL="${{ env.LIVE_URL }}" SCREENSHOT_DIR="$GITHUB_WORKSPACE/live-android-screenshots" node android/app-smoke.mjs
       - if: always()
         uses: actions/upload-artifact@v4
         with:

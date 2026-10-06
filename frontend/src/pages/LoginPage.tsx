@@ -60,8 +60,10 @@ export function LoginPage() {
       <main className="login-main">
         <div className="login-card stack" style={{ gap: 18 }}>
           <div>
-            <h1>Sign in</h1>
-            <p className="muted">Use your institutional account.</p>
+            <h1>{serverReady ? "Sign in" : "Welcome"}</h1>
+            <p className="muted">
+              {serverReady ? "Use your institutional account." : "First, connect the app to your college's AttendAI server."}
+            </p>
           </div>
           {native && (
             <ServerSettings

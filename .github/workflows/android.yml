@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       server_url:
-        description: "Default AttendAI server URL baked into the app (optional, e.g. https://attendai.onrender.com)"
+        description: "AttendAI server the app opens with (users can still change it)"
         required: false
-        default: ""
+        default: "https://attendai-gjk1.onrender.com"
 
 permissions:
   contents: write # publish the APK as a GitHub Release
@@ -25,6 +25,8 @@ concurrency:
 env:
   VERSION_CODE: ${{ github.run_number }}
   VERSION_NAME: 1.0.${{ github.run_number }}
+  # The live deployment; users can change the server inside the app.
+  DEFAULT_SERVER_URL: ${{ inputs.server_url || vars.ATTENDAI_SERVER_URL || 'https://attendai-gjk1.onrender.com' }}
 
 jobs:
   build:
@@ -54,7 +56,7 @@ jobs:
       - run: npm ci
       - name: Build web bundle
         env:
-          VITE_DEFAULT_SERVER_URL: ${{ inputs.server_url || vars.ATTENDAI_SERVER_URL }}
+          VITE_DEFAULT_SERVER_URL: ${{ env.DEFAULT_SERVER_URL }}
         run: npm run build
       - run: npx cap sync android
       - name: Release signing key
@@ -156,7 +158,7 @@ jobs:
       - name: Run app on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 35 # Android 15: edge-to-edge is enforced, like current phones
           arch: x86_64
           target: google_apis
           disable-animations: true
@@ -200,13 +202,14 @@ jobs:
           DEVICE_TEST: ${{ needs.device-test.result }}
         run: |
           SIGNING=$(sed -n 's/^signing=//p' dist-apk/build-info.txt)
-          if [ "$DEVICE_TEST" = "success" ]; then TESTED="✅ Passed the automated smoke test on an Android 14 emulator (sign-in, dashboards, navigation, back button)."; else TESTED="⚠️ The emulator smoke test did not pass for this build (result: $DEVICE_TEST)."; fi
+          if [ "$DEVICE_TEST" = "success" ]; then TESTED="✅ Passed the automated smoke test on an Android 15 emulator (sign-in, dashboards, navigation, back button, no overflow)."; else TESTED="⚠️ The emulator smoke test did not pass for this build (result: $DEVICE_TEST)."; fi
           if [ "$SIGNING" = "ephemeral" ]; then SIGNNOTE="Signed with a key generated for this build. To update, uninstall the previous build first (or configure the ANDROID_KEYSTORE_* repository secrets for stable signing)."; else SIGNNOTE="Signed with the project release key."; fi
           cat > notes.md <<EOF
           AttendAI Android app **${VERSION_NAME}** built from \`${GITHUB_SHA::7}\`.
 
           **Install:** download \`AttendAI-${VERSION_NAME}.apk\` on an Android 7.0+ phone, open it and allow installing from this source.
-          On first launch enter your AttendAI server address (the hosted website, e.g. \`https://attendai.onrender.com\`), then sign in.
+          The app opens connected to \`${DEFAULT_SERVER_URL}\` (change it on the sign-in screen if your college runs its own server).
+          Uninstall any older AttendAI build first.
           Demo accounts use the password \`Demo@2026\` (\`student@attendai.demo\`, \`mentor@attendai.demo\`, \`admin@attendai.demo\`, \`examcell@attendai.demo\`).
 
           ${TESTED}
@@ -217,7 +220,7 @@ jobs:
           ASSETS=("dist-apk/AttendAI-${VERSION_NAME}.apk")
           if ls android-screenshots/*.png > /dev/null 2>&1; then
             (cd android-screenshots && zip -q ../emulator-screenshots.zip ./*.png)
-            ASSETS+=("emulator-screenshots.zip#Screenshots of this build on the Android 14 emulator")
+            ASSETS+=("emulator-screenshots.zip#Screenshots of this build on the Android 15 emulator")
             printf '\n`emulator-screenshots.zip` shows this build running on the emulator during the automated test.\n' >> notes.md
           fi
           gh release delete android-latest --yes --cleanup-tag 2>/dev/null || true

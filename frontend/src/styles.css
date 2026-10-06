@@ -1305,14 +1305,22 @@ th.num {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+  /* phones: compact header, form directly below it (no stretched rows or centred gaps) */
   .login-wrap {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100dvh;
   }
   .login-aside {
-    padding: calc(28px + var(--safe-top)) 20px 28px;
+    padding: calc(20px + var(--safe-top)) 20px 22px;
+    justify-content: flex-start;
   }
   .login-aside h1 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
+  }
+  .login-main {
+    place-items: start center;
+    padding: 22px 16px calc(24px + var(--safe-bottom));
   }
   .page-head h1 {
     font-size: 1.3rem;
