@@ -24,6 +24,7 @@ third-party-cookie or CORS problems. A split deployment is supported too (see th
 | `DEMO_MODE` | no | `true` shows the demo-account panel on the login page |
 | `DEMO_PASSWORD` | no | default `Demo@2026` |
 | `CORS_ORIGINS` / `FRONTEND_ORIGIN` | only for split deployments | explicit origins, never `*` |
+| `MOBILE_APP_ORIGINS` | no | Android/iOS app WebView origins (default `https://localhost,capacitor://localhost`; `""` disables the app) |
 | `COOKIE_SECURE`, `COOKIE_SAMESITE` | no | default Secure in production, `lax` |
 | `TARGET_PERCENTAGE`, `WARNING_BAND_POINTS`, `TREND_RECENT_PERIODS`, `TREND_THRESHOLD_POINTS`, `DEFAULT_PLANNED_CLASSES` | no | analytics policy (75, 5, 2, 5, 60) |
 | `MAX_UPLOAD_MB`, `MAX_UPLOAD_ROWS` | no | 5, 20000 |
@@ -68,6 +69,13 @@ docker run -p 8000:8000 \
 Local production-like stack: `docker compose up --build` → <http://localhost:8000>.
 Behind a TLS-inspecting proxy, pass its CA as a build secret:
 `docker build --secret id=ca_bundle,src=/path/to/ca.pem -t attendai .`
+
+## Android app
+
+After the website is live, set the repository variable **`ATTENDAI_SERVER_URL`** (Settings → Secrets
+and variables → Actions → Variables) to the site URL. Then run **Actions → Android app → Run workflow**,
+so the APK opens with the server pre-filled. Without it, users type the address on first launch.
+See [MOBILE_APP.md](MOBILE_APP.md).
 
 ## Database
 

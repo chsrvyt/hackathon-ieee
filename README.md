@@ -35,7 +35,16 @@ Browser ──► FastAPI (serves the React SPA + /api) ──► PostgreSQL
 * **Backend**: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, psycopg 3, Pandas + openpyxl
 * **Frontend**: React 19 + TypeScript, Vite, React Router, TanStack Query, hand-drawn SVG charts
 * **Database**: PostgreSQL 16 (constraints for integrity, partial unique indexes)
+* **Mobile**: Android app (Capacitor 8) built by GitHub Actions, emulator-tested, and published as a GitHub Release
 * **Deployment**: one Docker image (API + built SPA, same origin) + managed PostgreSQL (Render Blueprint)
+
+## Navigation and mobile
+
+* **Desktop**: sticky top navigation bar (sections with icons and counts, account menu, sign out).
+* **Phones**: compact app bar plus a bottom tab bar (Home/Dashboard, Students, Upload, Requests,
+  Reports, Alerts by role). Tables become cards, touch targets are 44 px, and safe areas are respected.
+* **Android app**: download the APK from the repository's **Releases** page (`android-latest`). On
+  first launch enter the website address, then sign in. Details: [docs/MOBILE_APP.md](docs/MOBILE_APP.md).
 
 ## Quick start (Docker, recommended)
 
@@ -90,13 +99,16 @@ npm run dev                   # http://localhost:5173 (proxies /api to :8000)
 ## Tests
 
 ```bash
-cd backend  && pytest                       # 178 tests, needs PostgreSQL database "attendai_test"
+cd backend  && pytest                       # 181 tests, needs PostgreSQL database "attendai_test"
 cd frontend && npx tsc -b && npx vitest run # 11 tests
-cd e2e      && npm ci && E2E_BASE_URL=http://localhost:8000 npx playwright test   # 5 acceptance tests
+cd e2e      && npm ci && E2E_BASE_URL=http://localhost:8000 npx playwright test   # acceptance, phone layout, WCAG 2.1 AA
+# app-mode test: also serve frontend/dist on another origin and set E2E_NATIVE_URL (see docs/MOBILE_APP.md)
 ```
 
 CI (`.github/workflows/ci.yml`) runs backend lint and tests on PostgreSQL, frontend
-typecheck, tests and build, the Playwright acceptance suite and a Docker build.
+typecheck, tests and build, the Playwright suite (including app mode and accessibility) and a
+Docker build. `.github/workflows/android.yml` builds the APK, tests it on an Android emulator and
+publishes it.
 
 ## Deployment
 
@@ -117,4 +129,5 @@ PostgreSQL and the web service and generates `SECRET_KEY`.
 | [docs/QA_TEST_PLAN.md](docs/QA_TEST_PLAN.md) | Test IDs mapped to automated tests |
 | [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md) | Environment variables, deploy, smoke test, rollback |
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Judge walkthrough |
+| [docs/MOBILE_APP.md](docs/MOBILE_APP.md) | Android app: install, security, build pipeline, signing |
 | [docs/spec/](docs/spec/) | The original specification pack |

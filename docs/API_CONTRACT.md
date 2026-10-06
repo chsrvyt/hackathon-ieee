@@ -5,8 +5,12 @@ Base path: `/api`. Health is also served at `/health`. Interactive OpenAPI docs 
 
 ## Conventions
 
-* **Auth**: `POST /api/auth/login` sets an httpOnly session cookie (`attendai_session`).
-  The browser sends it automatically (`credentials: "include"`). There is no bearer token.
+* **Auth (web)**: `POST /api/auth/login` sets an httpOnly session cookie (`attendai_session`).
+  The browser sends it automatically (`credentials: "include"`).
+* **Auth (Android app)**: the same login with header `X-AttendAI-Client: mobile` returns
+  `{"user", "token", "expires_at"}` and sets no cookie. The app then sends
+  `Authorization: Bearer <token>`. Tokens are server-side sessions: they expire and are revoked by
+  `POST /auth/logout`. CORS admits only the app origins in `MOBILE_APP_ORIGINS`.
 * **CSRF guard**: every `POST/PUT/PATCH/DELETE` under `/api/` must send
   `X-Requested-With: AttendAI`, or it gets `403 CSRF_CHECK_FAILED`.
 * **Errors** always use this shape, with no stack traces:
@@ -40,8 +44,8 @@ out-of-scope id.
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/auth/login` | none | body `{"email","password"}` → `{"user": User}` + cookie. 8 failures / 15 min per IP+email → 429 |
-| POST | `/auth/logout` | cookie | revokes the server-side session, clears the cookie |
+| POST | `/auth/login` | none | body `{"email","password"}` → `{"user": User}` + cookie (web), or `{"user","token","expires_at"}` with `X-AttendAI-Client: mobile`. 8 failures / 15 min per IP+email → 429 |
+| POST | `/auth/logout` | cookie or bearer | revokes the server-side session, clears the cookie |
 | GET | `/auth/me` | required | `{"user": User}`; 401 when signed out |
 | GET | `/auth/session` | optional | `{"user": User \| null}` (startup probe, never 401) |
 | GET | `/auth/demo-accounts` | none | `{"enabled", "password", "accounts"}` only when `DEMO_MODE=true` |

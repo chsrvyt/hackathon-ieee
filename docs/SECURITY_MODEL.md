@@ -10,6 +10,10 @@
   `HMAC-SHA256(SECRET_KEY, token)`, so a database leak alone does not yield usable sessions.
   Sessions expire server-side, and **logout revokes the session**. Replaying the old cookie
   then fails (tested).
+* **Android app tokens**: the same random session token is returned in the login body *only* when
+  the request carries `X-AttendAI-Client: mobile`. The app stores it in app-private storage
+  (Android backup disabled), sends it as `Authorization: Bearer`, and logout revokes it. Browsers
+  never receive tokens in a response body, so the website's httpOnly-cookie protection is unchanged.
 * **Throttling**: 8 failed logins per (client IP, email) per 15 minutes → `429`. In-process
   memory, bounded in size.
 * `SECRET_KEY` is mandatory in production (startup fails if it is missing or shorter than
@@ -45,8 +49,11 @@ preflight, and only configured origins pass that.
 
 ## CORS
 
-Off by default (single-origin deployment: the API serves the SPA). For split deployments,
-`CORS_ORIGINS` / `FRONTEND_ORIGIN` list explicit origins. `*` is ignored, even if configured.
+The website needs no CORS (the API serves the SPA). The allow-list contains only the Android app's
+WebView origins (`MOBILE_APP_ORIGINS`, default `https://localhost,capacitor://localhost`) plus any
+explicit `CORS_ORIGINS` / `FRONTEND_ORIGIN` for split deployments. `*` is ignored, even if configured.
+Allowing the app origin does not expose cookie sessions: cookies are `SameSite=Lax`, so they are not
+sent on those cross-site requests, and the app authenticates with its own bearer token.
 
 ## Upload safety
 
